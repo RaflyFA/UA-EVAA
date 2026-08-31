@@ -237,23 +237,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 activeDropdown === "alur" ? "max-h-[320px] opacity-100 py-4 px-8" : "max-h-0 opacity-0 py-0 px-8"
               } flex flex-col gap-4 border-t border-[#3D4127]/5`}
             >
-              {["BAB 1: Niti Harti", "BAB 2: Niti Surti", "BAB 3: Niti Bukti", "BAB 4: Niti Bakti", "BAB 5: Niti Sajati"].map(
-                (bab) => (
-                  <Link
-                    key={bab}
-                    href="#"
-                    className="text-[#3D4127] hover:opacity-70 transition-opacity"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontWeight: 600,
-                      fontSize: "16px",
-                      lineHeight: "24px",
-                    }}
-                  >
-                    {bab}
-                  </Link>
-                )
-              )}
+              {[
+                { name: "BAB 1: Niti Harti", href: "/niti-harti" },
+                { name: "BAB 2: Niti Surti", href: "/niti-surti" },
+                { name: "BAB 3: Niti Bukti", href: "/niti-bukti" },
+                { name: "BAB 4: Niti Bakti", href: "/niti-bakti" },
+                { name: "BAB 5: Niti Sajati", href: "/niti-sajati" },
+              ].map((bab) => (
+                <Link
+                  key={bab.name}
+                  href={bab.href}
+                  onClick={onClose}
+                  className="text-[#3D4127] hover:opacity-70 transition-opacity"
+                  style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontWeight: 600,
+                    fontSize: "16px",
+                    lineHeight: "24px",
+                  }}
+                >
+                  {bab.name}
+                </Link>
+              ))}
             </div>
           </div>
 
