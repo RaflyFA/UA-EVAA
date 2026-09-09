@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { profile, signOut } = useAuth();
   // State untuk melacak dropdown mana yang terbuka
   const [activeDropdown, setActiveDropdown] = useState<"tentang" | "alur" | null>(null);
 
@@ -264,7 +266,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* Tugas Button */}
           <Link
-            href="#"
+            href="/niti-bukti"
+            onClick={onClose}
             className="w-full h-14 bg-[#FBFFF3] hover:bg-[#D3D8C3] transition-colors duration-200 rounded-[24px] px-6 flex items-center justify-start text-[#3D4127] shadow-[0px_2px_2px_0px_#00000040] select-none"
             style={{
               fontFamily: "Inter, sans-serif",
@@ -273,22 +276,101 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               lineHeight: "24px",
             }}
           >
-            Tugas
+            Tugas (Unggah Aksi)
           </Link>
 
-          {/* Profil & Pengaturan Button */}
-          <Link
-            href="#"
-            className="w-full h-14 bg-[#FBFFF3] hover:bg-[#D3D8C3] transition-colors duration-200 rounded-[24px] px-6 flex items-center justify-start text-[#3D4127] shadow-[0px_2px_2px_0px_#00000040] select-none"
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: "16px",
-              lineHeight: "24px",
-            }}
-          >
-            Profil & Pengaturan
-          </Link>
+          {/* Dashboard Guru Shortcut (Jika login sebagai Guru) */}
+          {profile?.role === "guru" && (
+            <Link
+              href="/guru/manajemen-modul"
+              onClick={onClose}
+              className="w-full h-14 bg-[#5B6628] hover:bg-[#4d5722] text-white transition-colors duration-200 rounded-[24px] px-6 flex items-center justify-between shadow-[0px_2px_2px_0px_#00000040] select-none"
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                fontSize: "16px",
+                lineHeight: "24px",
+              }}
+            >
+              <span>Dashboard Guru</span>
+              <span className="text-xs bg-white/20 px-2 py-1 rounded-md">Guru</span>
+            </Link>
+          )}
+
+          {/* User Auth Section (Masuk / Profil / Keluar) */}
+          <div className="w-full border-t border-[#3D4127]/15 my-2 pt-2 flex flex-col gap-2">
+            {profile ? (
+              <div className="w-full bg-[#FBFFF3] rounded-[20px] p-4 flex flex-col gap-3 shadow-[0px_2px_2px_0px_#00000030]">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[15px] font-bold text-[#3D4127] leading-tight">
+                      {profile.nama_lengkap}
+                    </span>
+                    <span className="text-[12px] font-medium text-[#3D4127]/70">
+                      {profile.role === "guru"
+                        ? `Guru Pengampu ${profile.nomor_induk ? `(${profile.nomor_induk})` : ""}`
+                        : `Siswa ${profile.kelas || ""} ${profile.nomor_induk ? `• NISN: ${profile.nomor_induk}` : ""}`}
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-[#5B6628]/15 text-[#5B6628]">
+                    {profile.role}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await signOut();
+                    onClose();
+                  }}
+                  className="w-full py-2 bg-[#f87171]/15 hover:bg-[#f87171]/25 text-[#b91c1c] text-[13px] font-bold rounded-[14px] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Keluar Akun
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={onClose}
+                className="w-full h-14 bg-[#5B6628] hover:bg-[#4d5722] text-white transition-colors duration-200 rounded-[24px] px-6 flex items-center justify-center gap-2 shadow-[0px_2px_2px_0px_#00000040] select-none"
+                style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  lineHeight: "24px",
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                Masuk / Daftar Akun
+              </Link>
+            )}
+          </div>
         </div>
       </aside>
     </>

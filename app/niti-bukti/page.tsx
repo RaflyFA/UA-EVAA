@@ -1,27 +1,162 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 
 export default function NitiBuktiPage() {
+  const router = useRouter();
+  const { profile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success">("idle");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedPath, setUploadedPath] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Proteksi akses & cek apakah sudah pernah submit sebelumnya
+  useEffect(() => {
+    async function init() {
+      if (!profile?.id) return;
+
+      // Cek status tahap Niti Bukti
+      const { data: prog } = await supabase
+        .from("progress_siswa")
+        .select("status")
+        .eq("siswa_id", profile.id)
+        .eq("tahap_niti", "bukti")
+        .maybeSingle();
+
+      if (prog && prog.status === "terkunci") {
+        alert("Tahap Niti Bukti masih terkunci! Selesaikan tahap sebelumnya terlebih dahulu.");
+        router.push("/alur");
+        return;
+      }
+
+      // Cek submission yang sudah ada
+      const { data: sub } = await supabase
+        .from("submission_aksi")
+        .select("*")
+        .eq("siswa_id", profile.id)
+        .eq("tahap_niti", "bukti")
+        .order("tanggal_submit", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (sub) {
+        setUploadStatus("success");
+      }
+    }
+
+    init();
+  }, [profile, router]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      setErrorMessage(null);
+
+      // Pastikan pengguna sudah masuk
+      if (!profile?.id) {
+        alert("Anda belum masuk! Silakan masuk dengan akun Siswa terlebih dahulu untuk mengunggah tugas.");
+        return;
+      }
+
+      // Batasi ukuran file maks 10MB
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Ukuran file melebihi batas 10 MB!");
+        return;
+      }
+
       setUploadedFile(file);
       setUploadStatus("uploading");
 
-      // Simulasi loading unggah selama 2.5 detik
-      setTimeout(() => {
+      try {
+        const fileExt = file.name.split(".").pop();
+        const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        const filePath = `niti-bukti/${safeFileName}`;
+
+        // 1. Upload berkas ke Supabase Storage Bucket 'submissions'
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from("submissions")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadErr) {
+          throw new Error(`Gagal upload berkas ke storage: ${uploadErr.message}`);
+        }
+
+        if (uploadData?.path) {
+          setUploadedPath(uploadData.path);
+        }
+
+        // 2. Dapatkan URL publik berkas
+        const { data: urlData } = supabase.storage
+          .from("submissions")
+          .getPublicUrl(filePath);
+
+        const publicUrl = urlData?.publicUrl || "";
+
+        // 3. Simpan catatan ke tabel submission_aksi dengan siswa_id yang valid
+        const { error: insertErr } = await supabase.from("submission_aksi").insert({
+          siswa_id: profile.id,
+          tahap_niti: "bukti",
+          kategori_aksi: null,
+          nama_file: file.name,
+          file_url: publicUrl,
+          status: "menunggu_review",
+        });
+
+        if (insertErr) {
+          throw new Error(`Gagal menyimpan ke database: ${insertErr.message}`);
+        }
+
+        // 4. Update progress_siswa untuk bukti dan buka Niti Bakti
+        const now = new Date().toISOString();
+        await supabase
+          .from("progress_siswa")
+          .update({
+            status: "disetujui",
+            tanggal_selesai: now,
+            updated_at: now,
+          })
+          .eq("siswa_id", profile.id)
+          .eq("tahap_niti", "bukti");
+
+        const { data: baktiProg } = await supabase
+          .from("progress_siswa")
+          .select("status")
+          .eq("siswa_id", profile.id)
+          .eq("tahap_niti", "bakti")
+          .maybeSingle();
+
+        if (baktiProg && baktiProg.status === "terkunci") {
+          await supabase
+            .from("progress_siswa")
+            .update({
+              status: "tersedia",
+              tanggal_mulai: now,
+              updated_at: now,
+            })
+            .eq("siswa_id", profile.id)
+            .eq("tahap_niti", "bakti");
+        }
+
         setUploadStatus("success");
-      }, 2500);
+      } catch (err: unknown) {
+        const errObj = err as Error;
+        console.error("Upload error:", errObj);
+        setErrorMessage(errObj.message || "Terjadi kesalahan saat mengunggah.");
+        setUploadStatus("idle");
+        setUploadedFile(null);
+      }
     }
   };
 
@@ -31,9 +166,17 @@ export default function NitiBuktiPage() {
     }
   };
 
-  const handleCancel = (e: React.MouseEvent) => {
+  const handleCancel = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (uploadedPath) {
+      try {
+        await supabase.storage.from("submissions").remove([uploadedPath]);
+      } catch (err) {
+        console.error("Gagal menghapus file dari storage:", err);
+      }
+    }
     setUploadedFile(null);
+    setUploadedPath(null);
     setUploadStatus("idle");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -107,9 +250,40 @@ export default function NitiBuktiPage() {
         <div className="w-full max-w-[354px] min-h-[160px] bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-4">
           {/* Judul & Deskripsi */}
           <div className="flex flex-col gap-2">
-            <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
-              Unggah Rencana Aksi
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
+                Unggah Rencana Aksi
+              </h2>
+              {profile ? (
+                <span className="text-[11px] font-semibold bg-[#5B6628]/15 text-[#5B6628] px-2 py-0.5 rounded-full truncate max-w-[140px]" title={profile.nama_lengkap}>
+                  👤 {profile.nama_lengkap}
+                </span>
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-[11px] font-bold text-[#b91c1c] underline bg-[#f87171]/15 px-2 py-0.5 rounded-full"
+                >
+                  Belum Masuk ↗
+                </Link>
+              )}
+            </div>
+
+            {errorMessage && (
+              <div className="p-2.5 bg-[#f87171]/20 border border-[#f87171] rounded-[12px] text-[#b91c1c] text-xs font-semibold">
+                ⚠️ {errorMessage}
+              </div>
+            )}
+
+            {!profile && (
+              <div className="p-2.5 bg-[#EDF0E8] border border-[#D3D8C3] rounded-[12px] text-[#3D4127] text-xs">
+                ⚠️ Anda belum masuk. Silakan{" "}
+                <Link href="/login" className="font-bold underline text-[#5B6628]">
+                  Masuk terlebih dahulu
+                </Link>{" "}
+                agar tugas Anda tersimpan ke sistem.
+              </div>
+            )}
+
             {uploadStatus === "idle" && (
               <p className="text-[14px] font-[500] leading-[20px] text-[#3D4127]">
                 Publikasikan rencana solusi yang saudara dan kelompok saudara sudah rancang dan akan dilaksanakan.

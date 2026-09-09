@@ -1,80 +1,120 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+
+interface AbsensiItem {
+  id: string;
+  nama: string;
+  kelas: string;
+  tanggal: string;
+  jumlahKehadiran: string;
+}
+
+const defaultAbsensiData: AbsensiItem[] = [
+  {
+    id: "1",
+    nama: "Absensi Kehadiran VII-C 3",
+    kelas: "VII-C",
+    tanggal: "10 Agustus, 2026",
+    jumlahKehadiran: "5/6",
+  },
+  {
+    id: "2",
+    nama: "Absensi Kehadiran VII-B 3",
+    kelas: "VII-B",
+    tanggal: "10 Agustus, 2026",
+    jumlahKehadiran: "6/6",
+  },
+  {
+    id: "3",
+    nama: "Absensi Kehadiran VII-A 3",
+    kelas: "VII-A",
+    tanggal: "10 Agustus, 2026",
+    jumlahKehadiran: "5/6",
+  },
+  {
+    id: "4",
+    nama: "Absensi Kehadiran VII-C 2",
+    kelas: "VII-C",
+    tanggal: "9 Agustus, 2026",
+    jumlahKehadiran: "6/6",
+  },
+  {
+    id: "5",
+    nama: "Absensi Kehadiran VII-B 2",
+    kelas: "VII-B",
+    tanggal: "9 Agustus, 2026",
+    jumlahKehadiran: "5/6",
+  },
+  {
+    id: "6",
+    nama: "Absensi Kehadiran VII-A 2",
+    kelas: "VII-A",
+    tanggal: "9 Agustus, 2026",
+    jumlahKehadiran: "6/6",
+  },
+  {
+    id: "7",
+    nama: "Absensi Kehadiran VII-C 1",
+    kelas: "VII-C",
+    tanggal: "8 Agustus, 2026",
+    jumlahKehadiran: "4/6",
+  },
+  {
+    id: "8",
+    nama: "Absensi Kehadiran VII-B 1",
+    kelas: "VII-B",
+    tanggal: "8 Agustus, 2026",
+    jumlahKehadiran: "6/6",
+  },
+  {
+    id: "9",
+    nama: "Absensi Kehadiran VII-A 1",
+    kelas: "VII-A",
+    tanggal: "8 Agustus, 2026",
+    jumlahKehadiran: "6/6",
+  },
+];
 
 export default function GuruAbsensiPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKelas, setSelectedKelas] = useState("Semua Kelas");
   const [selectedTanggal, setSelectedTanggal] = useState("Semua Tanggal");
+  const [absensiList, setAbsensiList] = useState<AbsensiItem[]>(defaultAbsensiData);
 
-  // Data dummy 9 baris persis seperti mockup
-  const absensiData = [
-    {
-      id: "1",
-      nama: "Absensi Kehadiran VII-C 3",
-      kelas: "VII-C",
-      tanggal: "10 Agustus, 2026",
-      jumlahKehadiran: "5/6",
-    },
-    {
-      id: "2",
-      nama: "Absensi Kehadiran VII-B 3",
-      kelas: "VII-B",
-      tanggal: "10 Agustus, 2026",
-      jumlahKehadiran: "6/6",
-    },
-    {
-      id: "3",
-      nama: "Absensi Kehadiran VII-A 3",
-      kelas: "VII-A",
-      tanggal: "10 Agustus, 2026",
-      jumlahKehadiran: "5/6",
-    },
-    {
-      id: "4",
-      nama: "Absensi Kehadiran VII-C 2",
-      kelas: "VII-C",
-      tanggal: "9 Agustus, 2026",
-      jumlahKehadiran: "6/6",
-    },
-    {
-      id: "5",
-      nama: "Absensi Kehadiran VII-B 2",
-      kelas: "VII-B",
-      tanggal: "9 Agustus, 2026",
-      jumlahKehadiran: "5/6",
-    },
-    {
-      id: "6",
-      nama: "Absensi Kehadiran VII-A 2",
-      kelas: "VII-A",
-      tanggal: "9 Agustus, 2026",
-      jumlahKehadiran: "6/6",
-    },
-    {
-      id: "7",
-      nama: "Absensi Kehadiran VII-C 1",
-      kelas: "VII-C",
-      tanggal: "8 Agustus, 2026",
-      jumlahKehadiran: "4/6",
-    },
-    {
-      id: "8",
-      nama: "Absensi Kehadiran VII-B 1",
-      kelas: "VII-B",
-      tanggal: "8 Agustus, 2026",
-      jumlahKehadiran: "6/6",
-    },
-    {
-      id: "9",
-      nama: "Absensi Kehadiran VII-A 1",
-      kelas: "VII-A",
-      tanggal: "8 Agustus, 2026",
-      jumlahKehadiran: "6/6",
-    },
-  ];
+  useEffect(() => {
+    async function loadAbsensi() {
+      try {
+        const { data, error } = await supabase.from("absensi").select("*").limit(20);
+        if (!error && data && data.length > 0) {
+          // Jika ada entri nyata di database
+          const mapped: AbsensiItem[] = data.map((item, idx) => ({
+            id: String(item.id || idx + 1),
+            nama: `Absensi Kehadiran ${item.tanggal || "Terbaru"}`,
+            kelas: "VII-A",
+            tanggal: item.tanggal || "Hari Ini",
+            jumlahKehadiran: item.status === "Hadir" ? "1/1" : "0/1",
+          }));
+          setAbsensiList(mapped);
+        }
+      } catch (err) {
+        console.error("Error fetching absensi:", err);
+      }
+    }
+    loadAbsensi();
+  }, []);
+
+  const filteredData = absensiList.filter((row) => {
+    const matchSearch =
+      row.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      row.kelas.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchKelas =
+      selectedKelas === "Semua Kelas" || row.kelas === selectedKelas;
+    return matchSearch && matchKelas;
+  });
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -132,14 +172,14 @@ export default function GuruAbsensiPage() {
         {/* Right Side: Action Buttons */}
         <div className="flex items-center gap-3">
           {/* Tombol Rekap Absensi */}
-          <button className="w-[159px] h-[50px] border-2 border-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#636B2F] font-semibold text-[15px] hover:bg-[#636B2F]/10 transition-colors">
+          <button className="w-[159px] h-[50px] border-2 border-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#636B2F] font-semibold text-[15px] hover:bg-[#636B2F]/10 transition-colors cursor-pointer">
             Rekap Absensi
           </button>
 
           {/* Tombol Absensi Kehadiran */}
           <Link
             href="/guru/absensi/1"
-            className="w-[185px] h-[50px] bg-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#FBFFF3] font-semibold text-[15px] hover:bg-[#525826] shadow-sm transition-colors"
+            className="w-[185px] h-[50px] bg-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#FBFFF3] font-semibold text-[15px] hover:bg-[#525826] shadow-sm transition-colors cursor-pointer"
           >
             Absensi Kehadiran
           </Link>
@@ -163,12 +203,12 @@ export default function GuruAbsensiPage() {
             />
           </div>
           <div className="flex-[2] truncate">Jumlah Kehadiran</div>
-          <div className="w-6" /> {/* Placeholder untuk tombol 3 titik */}
+          <div className="w-6" />
         </div>
 
         {/* Table Data Rows */}
         <div className="flex flex-col gap-[8px] w-full max-w-[1110px]">
-          {absensiData.map((row) => (
+          {filteredData.map((row) => (
             <Link
               key={row.id}
               href={`/guru/absensi/${row.id}`}

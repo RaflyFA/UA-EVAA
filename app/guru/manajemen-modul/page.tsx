@@ -1,51 +1,106 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+
+interface ModuleItem {
+  number: string;
+  title: string;
+  description: string;
+  image: string;
+}
+
+const defaultModules: ModuleItem[] = [
+  {
+    number: "1",
+    title: "Niti Harti",
+    description: "Pahami konsep dasar dan teorinya.",
+    image: "/gambar 4.png",
+  },
+  {
+    number: "2",
+    title: "Niti Surti",
+    description: "Mengelompokkan Informasi.",
+    image: "/niti-surti.png",
+  },
+  {
+    number: "3",
+    title: "Niti Bukti",
+    description: "Unggah dan Presentasikan.",
+    image: "/niti-bukti-icon.png",
+  },
+  {
+    number: "4",
+    title: "Niti Bakti",
+    description: "Aksi nyata dari tiga kategori lingkungan.",
+    image: "/niti-bakti.png",
+  },
+  {
+    number: "5",
+    title: "Niti Sajati",
+    description: "Pencapaian Pembelajaran.",
+    image: "/niti-sajati.png",
+  },
+];
 
 export default function GuruManajemenModulPage() {
-  const modules = [
-    {
-      number: "1",
-      title: "Niti Harti",
-      description: "Pahami konsep dasar dan teorinya.",
-      image: "/gambar 4.png",
-    },
-    {
-      number: "2",
-      title: "Niti Surti",
-      description: "Mengelompokkan Informasi.",
-      image: "/niti-surti.png",
-    },
-    {
-      number: "3",
-      title: "Niti Bukti",
-      description: "Unggah dan Presentasikan.",
-      image: "/niti-bukti-icon.png",
-    },
-    {
-      number: "4",
-      title: "Niti Bakti",
-      description: "Aksi nyata dari tiga kategori lingkungan.",
-      image: "/niti-bakti.png",
-    },
-    {
-      number: "5",
-      title: "Niti Sajati",
-      description: "Pencapaian Pembelajaran.",
-      image: "/niti-sajati.png",
-    },
-  ];
+  const [modules, setModules] = useState<ModuleItem[]>(defaultModules);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadModules() {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from("konten_modul")
+          .select("*")
+          .order("urutan", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const mapped: ModuleItem[] = data.map((item, idx) => ({
+            number: String(item.urutan || idx + 1),
+            title: item.judul || `Modul ${idx + 1}`,
+            description: item.deskripsi || "Deskripsi modul pembelajaran.",
+            image: defaultModules[idx]?.image || "/gambar 4.png",
+          }));
+          setModules(mapped);
+        }
+      } catch (err) {
+        console.error("Error fetching modules from Supabase:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadModules();
+  }, []);
 
   return (
     <div className="w-full bg-[#FBFFF3] rounded-[16px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-6">
       {/* Header Content Section */}
       <div className="flex items-center justify-between w-full pb-2">
-        <h1 className="text-[20px] font-bold text-[#3D4127]">Alur Modul</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-[20px] font-bold text-[#3D4127]">Alur Modul</h1>
+          {isLoading && (
+            <span className="text-[12px] text-[#636B2F] animate-pulse">
+              Memuat data...
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-4">
           {/* Tombol Salin Link */}
-          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 text-[#3D4127] transition-colors">
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                navigator.clipboard.writeText(window.location.href);
+                alert("Tautan halaman modul berhasil disalin!");
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 text-[#3D4127] transition-colors cursor-pointer"
+          >
             <Image
               src="/guru/salinlink.svg"
               alt="Salin Link"
@@ -99,7 +154,7 @@ export default function GuruManajemenModulPage() {
                 }}
               />
 
-              {/* Angka Besar Transparan di Kiri Atas (50% Opacity #FBFFF380) */}
+              {/* Angka Besar Transparan di Kiri Atas */}
               <span className="absolute top-3 left-4 z-30 font-bold text-[56px] leading-none text-[#FBFFF380] select-none">
                 {mod.number}
               </span>

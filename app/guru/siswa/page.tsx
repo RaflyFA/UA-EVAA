@@ -1,63 +1,104 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+
+interface SiswaItem {
+  id: string;
+  nama: string;
+  kelas: string;
+  avatar: string;
+  progress: boolean[];
+}
+
+const defaultSiswaData: SiswaItem[] = [
+  {
+    id: "1",
+    nama: "Nova Luthfi 1",
+    kelas: "VII-A",
+    avatar: "/guru/profile.jpg",
+    progress: [true, true, false, false, false],
+  },
+  {
+    id: "2",
+    nama: "Nova Luthfi 2",
+    kelas: "VII-A",
+    avatar: "/guru/profile.jpg",
+    progress: [true, true, true, true, true],
+  },
+  {
+    id: "3",
+    nama: "Nova Luthfi 3",
+    kelas: "VII-B",
+    avatar: "/guru/profile.jpg",
+    progress: [true, true, true, true, false],
+  },
+  {
+    id: "4",
+    nama: "Nova Luthfi 4",
+    kelas: "VII-B",
+    avatar: "/guru/profile.jpg",
+    progress: [true, true, true, false, false],
+  },
+  {
+    id: "5",
+    nama: "Nova Luthfi 5",
+    kelas: "VII-C",
+    avatar: "/guru/profile.jpg",
+    progress: [true, true, false, false, false],
+  },
+  {
+    id: "6",
+    nama: "Nova Luthfi 6",
+    kelas: "VII-C",
+    avatar: "/guru/profile.jpg",
+    progress: [true, true, true, false, false],
+  },
+];
 
 export default function GuruSiswaPenilaianPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKelas, setSelectedKelas] = useState("Semua Kelas");
   const [selectedProgres, setSelectedProgres] = useState("Semua Progres");
+  const [siswaData, setSiswaData] = useState<SiswaItem[]>(defaultSiswaData);
 
-  // Data dummy 6 siswa persis seperti pada mockup
-  const siswaData = [
-    {
-      id: "1",
-      nama: "Nova Luthfi 1",
-      kelas: "VII-A",
-      avatar: "/guru/profile.jpg",
-      progress: [true, true, false, false, false],
-    },
-    {
-      id: "2",
-      nama: "Nova Luthfi 2",
-      kelas: "VII-A",
-      avatar: "/guru/profile.jpg",
-      progress: [true, true, true, true, true],
-    },
-    {
-      id: "3",
-      nama: "Nova Luthfi 3",
-      kelas: "VII-B",
-      avatar: "/guru/profile.jpg",
-      progress: [true, true, true, true, false],
-    },
-    {
-      id: "4",
-      nama: "Nova Luthfi 4",
-      kelas: "VII-B",
-      avatar: "/guru/profile.jpg",
-      progress: [true, true, true, false, false],
-    },
-    {
-      id: "5",
-      nama: "Nova Luthfi 5",
-      kelas: "VII-C",
-      avatar: "/guru/profile.jpg",
-      progress: [true, true, false, false, false],
-    },
-    {
-      id: "6",
-      nama: "Nova Luthfi 6",
-      kelas: "VII-C",
-      avatar: "/guru/profile.jpg",
-      progress: [true, true, true, false, false],
-    },
-  ];
+  useEffect(() => {
+    async function loadSiswa() {
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("role", "siswa");
+
+        if (!error && data && data.length > 0) {
+          const mapped: SiswaItem[] = data.map((p, idx) => ({
+            id: p.id || String(idx + 1),
+            nama: p.nama_lengkap || `Siswa ${idx + 1}`,
+            kelas: p.kelas || "VII-A",
+            avatar: p.avatar_url || "/guru/profile.jpg",
+            progress: [true, true, false, false, false],
+          }));
+          setSiswaData(mapped);
+        }
+      } catch (err) {
+        console.error("Error fetching siswa from Supabase:", err);
+      }
+    }
+    loadSiswa();
+  }, []);
+
+  const filteredData = siswaData.filter((row) => {
+    const matchSearch = row.nama.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchKelas =
+      selectedKelas === "Semua Kelas" || row.kelas === selectedKelas;
+    return matchSearch && matchKelas;
+  });
 
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* Top Control Bar (Search, Filters, Action Buttons) */}
+      {/* Top Control Bar */}
       <div className="w-full max-w-[1158px] flex items-center justify-between flex-wrap gap-3">
         {/* Left Side: Search & Filters */}
         <div className="flex items-center gap-3">
@@ -111,14 +152,14 @@ export default function GuruSiswaPenilaianPage() {
         {/* Right Side: Action Buttons */}
         <div className="flex items-center gap-3">
           {/* Tombol Rekap Nilai */}
-          <button className="w-[159px] h-[50px] border-2 border-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#636B2F] font-semibold text-[15px] hover:bg-[#636B2F]/10 transition-colors">
+          <button className="w-[159px] h-[50px] border-2 border-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#636B2F] font-semibold text-[15px] hover:bg-[#636B2F]/10 transition-colors cursor-pointer">
             Rekap Nilai
           </button>
 
           {/* Tombol Input Nilai */}
           <Link
             href="/guru/siswa/1"
-            className="w-[185px] h-[50px] bg-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#FBFFF3] font-semibold text-[15px] hover:bg-[#525826] shadow-sm transition-colors"
+            className="w-[185px] h-[50px] bg-[#636B2F] rounded-[16px] px-[20px] py-[8px] flex items-center justify-center gap-[10px] text-[#FBFFF3] font-semibold text-[15px] hover:bg-[#525826] shadow-sm transition-colors cursor-pointer"
           >
             Input Nilai
           </Link>
@@ -141,12 +182,12 @@ export default function GuruSiswaPenilaianPage() {
           </div>
           <div className="flex-[2] truncate">Kelas</div>
           <div className="flex-[4] truncate">Progres Modul 1</div>
-          <div className="w-6" /> {/* Placeholder untuk tombol 3 titik */}
+          <div className="w-6" />
         </div>
 
         {/* Table Data Rows */}
         <div className="flex flex-col gap-[8px] w-full max-w-[1110px]">
-          {siswaData.map((row) => (
+          {filteredData.map((row) => (
             <Link
               key={row.id}
               href={`/guru/siswa/${row.id}`}

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 
 interface BahanBacaanItem {
   id: number;
@@ -34,18 +36,98 @@ const bahanBacaanData: BahanBacaanItem[] = [
 ];
 
 export default function NitiHartiPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [openStates, setOpenStates] = useState<Record<number, boolean>>({
     1: false,
     2: false,
     3: false,
   });
 
+  // Proteksi akses: pastikan Niti Harti tidak terkunci
+  useEffect(() => {
+    async function checkAccess() {
+      if (authLoading) return;
+      if (!user) {
+        // Jika belum login, biarkan atau redirect ke login
+        return;
+      }
+
+      const { data } = await supabase
+        .from("progress_siswa")
+        .select("status")
+        .eq("siswa_id", user.id)
+        .eq("tahap_niti", "harti")
+        .maybeSingle();
+
+      if (data && data.status === "terkunci") {
+        alert("Tahap ini masih terkunci!");
+        router.push("/alur");
+      }
+    }
+
+    checkAccess();
+  }, [user, authLoading, router]);
+
   const toggleAccordion = (id: number) => {
     setOpenStates((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
+  };
+
+  // Selesaikan Niti Harti dan buka Niti Surti
+  const handleLanjut = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      if (user) {
+        const now = new Date().toISOString();
+
+        // 1. Tandai Harti sebagai disetujui (selesai)
+        await supabase
+          .from("progress_siswa")
+          .update({
+            status: "disetujui",
+            tanggal_selesai: now,
+            updated_at: now,
+          })
+          .eq("siswa_id", user.id)
+          .eq("tahap_niti", "harti");
+
+        // 2. Buka gembok Niti Surti (ubah dari terkunci menjadi tersedia)
+        const { data: surtiData } = await supabase
+          .from("progress_siswa")
+          .select("status")
+          .eq("siswa_id", user.id)
+          .eq("tahap_niti", "surti")
+          .maybeSingle();
+
+        if (surtiData && surtiData.status === "terkunci") {
+          await supabase
+            .from("progress_siswa")
+            .update({
+              status: "tersedia",
+              tanggal_mulai: now,
+              updated_at: now,
+            })
+            .eq("siswa_id", user.id)
+            .eq("tahap_niti", "surti");
+        }
+      }
+
+      // 3. Arahkan ke halaman Niti Surti
+      router.push("/niti-surti");
+    } catch (err) {
+      console.error("Gagal mengupdate progress:", err);
+      // Tetap lanjutkan navigasi jika ada kendala koneksi
+      router.push("/niti-surti");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -57,9 +139,8 @@ export default function NitiHartiPage() {
           <Topbar onMenuClick={() => setIsSidebarOpen(true)} variant="dark" />
         </div>
 
-        {/* Header Niti Harti - Lapisan 1: Dasaran Persegi Panjang Warna #EDF0E8 */}
+        {/* Header Niti Harti */}
         <div className="relative w-full max-w-[354px] h-[140px] bg-[#EDF0E8] rounded-bl-[24px] rounded-br-[24px] overflow-hidden shadow-md flex flex-col justify-end">
-          {/* Lapisan 2: Gambar Lampiran 1 (Di atas #EDF0E8, di bawah Overlay Blur) */}
           <div className="absolute right-0 top-0 bottom-0 w-[160px] pointer-events-none flex items-center justify-center z-10">
             <Image
               src="/lampiran-1.png"
@@ -71,7 +152,6 @@ export default function NitiHartiPage() {
             />
           </div>
 
-          {/* Lapisan 3: Efek Gradien #636B2F (Di atas Gambar, di bawah Teks) */}
           <div
             className="absolute inset-0 rounded-bl-[24px] rounded-br-[24px] pointer-events-none z-20"
             style={{
@@ -80,31 +160,12 @@ export default function NitiHartiPage() {
             }}
           />
 
-          {/* Lapisan 4: Teks "Niti Harti" & Subtitle (Paling Atas) */}
           <div className="relative z-30 w-full h-full p-6 flex flex-col justify-end gap-[12px]">
             <div className="flex flex-col gap-1 w-full max-w-[210px]">
-              <h1
-                style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontWeight: 700,
-                  fontSize: "32px",
-                  lineHeight: "38px",
-                  letterSpacing: "0%",
-                  color: "#FBFFF3",
-                }}
-              >
+              <h1 className="font-bold text-[32px] leading-[38px] text-[#FBFFF3]">
                 Niti Harti
               </h1>
-              <p
-                style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontWeight: 500,
-                  fontSize: "12px",
-                  lineHeight: "20px",
-                  letterSpacing: "0%",
-                  color: "#FBFFF3",
-                }}
-              >
+              <p className="font-medium text-[12px] leading-[20px] text-[#FBFFF3]">
                 Pahami konsep dasar dan teorinya.
               </p>
             </div>
@@ -197,19 +258,21 @@ export default function NitiHartiPage() {
       {/* Tombol Lanjut ke Niti Surti (Fixed Bottom) */}
       <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+32px)] left-0 right-0 flex justify-center px-6 z-10 pointer-events-none">
         <div className="w-full max-w-[354px] pointer-events-auto">
-          <Link href="/niti-surti" className="block w-full">
-            <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
-              <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
-                Lanjut ke Niti Surti
-              </span>
-              <Image
-                src="/panah-button-terang.svg"
-                alt="Panah"
-                width={20}
-                height={20}
-              />
-            </button>
-          </Link>
+          <button
+            onClick={handleLanjut}
+            disabled={isSubmitting}
+            className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none disabled:opacity-75 cursor-pointer"
+          >
+            <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
+              {isSubmitting ? "Menyimpan..." : "Lanjut ke Niti Surti"}
+            </span>
+            <Image
+              src="/panah-button-terang.svg"
+              alt="Panah"
+              width={20}
+              height={20}
+            />
+          </button>
         </div>
       </div>
 

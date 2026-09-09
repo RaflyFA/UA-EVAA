@@ -1,13 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 
 export default function NitiSajatiPage() {
+  const router = useRouter();
+  const { profile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Proteksi akses & tandai Niti Sajati selesai saat dikunjungi
+  useEffect(() => {
+    async function init() {
+      if (!profile?.id) return;
+
+      const { data: prog } = await supabase
+        .from("progress_siswa")
+        .select("status")
+        .eq("siswa_id", profile.id)
+        .eq("tahap_niti", "sajati")
+        .maybeSingle();
+
+      if (prog && prog.status === "terkunci") {
+        alert("Tahap Niti Sajati masih terkunci! Selesaikan tahap sebelumnya terlebih dahulu.");
+        router.push("/alur");
+        return;
+      }
+
+      // Tandai sajati selesai jika belum
+      if (prog && prog.status !== "disetujui") {
+        const now = new Date().toISOString();
+        await supabase
+          .from("progress_siswa")
+          .update({
+            status: "disetujui",
+            tanggal_selesai: now,
+            updated_at: now,
+          })
+          .eq("siswa_id", profile.id)
+          .eq("tahap_niti", "sajati");
+      }
+    }
+
+    init();
+  }, [profile, router]);
 
   const achievements = [
     {

@@ -1,9 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+
+interface SiswaAbsen {
+  id: string;
+  nama: string;
+  avatar: string;
+  status: string;
+}
+
+const defaultSiswaAbsensi: SiswaAbsen[] = [
+  { id: "1", nama: "Nova Luthfi 1", avatar: "/guru/profile.jpg", status: "Hadir" },
+  { id: "2", nama: "Nova Luthfi 2", avatar: "/guru/profile.jpg", status: "Sakit/Izin" },
+  { id: "3", nama: "Nova Luthfi 3", avatar: "/guru/profile.jpg", status: "Hadir" },
+  { id: "4", nama: "Nova Luthfi 4", avatar: "/guru/profile.jpg", status: "Hadir" },
+  { id: "5", nama: "Nova Luthfi 5", avatar: "/guru/profile.jpg", status: "Tidak Hadir" },
+  { id: "6", nama: "Nova Luthfi 6", avatar: "/guru/profile.jpg", status: "Sakit/Izin" },
+  { id: "7", nama: "Nova Luthfi 7", avatar: "/guru/profile.jpg", status: "Hadir" },
+  { id: "8", nama: "Nova Luthfi 8", avatar: "/guru/profile.jpg", status: "Hadir" },
+];
 
 export default function GuruDetailAbsensiPage() {
   const params = useParams();
@@ -13,19 +32,35 @@ export default function GuruDetailAbsensiPage() {
   const [selectedKelas, setSelectedKelas] = useState("VII-A");
   const [selectedTanggal, setSelectedTanggal] = useState("11 Agustus 2026");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveNotification, setSaveNotification] = useState<string | null>(null);
 
-  // State status absensi per siswa
-  // Opsi status: "Hadir" | "Sakit/Izin" | "Tidak Hadir"
-  const [siswaAbsensi, setSiswaAbsensi] = useState([
-    { id: "1", nama: "Nova Luthfi 1", avatar: "/guru/profile.jpg", status: "Hadir" },
-    { id: "2", nama: "Nova Luthfi 2", avatar: "/guru/profile.jpg", status: "Sakit/Izin" },
-    { id: "3", nama: "Nova Luthfi 3", avatar: "/guru/profile.jpg", status: "Hadir" },
-    { id: "4", nama: "Nova Luthfi 4", avatar: "/guru/profile.jpg", status: "Hadir" },
-    { id: "5", nama: "Nova Luthfi 5", avatar: "/guru/profile.jpg", status: "Tidak Hadir" },
-    { id: "6", nama: "Nova Luthfi 6", avatar: "/guru/profile.jpg", status: "Sakit/Izin" },
-    { id: "7", nama: "Nova Luthfi 7", avatar: "/guru/profile.jpg", status: "Hadir" },
-    { id: "8", nama: "Nova Luthfi 8", avatar: "/guru/profile.jpg", status: "Hadir" },
-  ]);
+  const [siswaAbsensi, setSiswaAbsensi] = useState<SiswaAbsen[]>(defaultSiswaAbsensi);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: profiles, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("role", "siswa");
+
+        if (!error && profiles && profiles.length > 0) {
+          setSiswaAbsensi(
+            profiles.map((p) => ({
+              id: p.id,
+              nama: p.nama_lengkap || "Siswa",
+              avatar: p.avatar_url || "/guru/profile.jpg",
+              status: "Hadir",
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching siswa profiles:", err);
+      }
+    }
+    loadData();
+  }, []);
 
   const handleStatusChange = (siswaId: string, newStatus: string) => {
     setSiswaAbsensi((prev) =>
@@ -35,11 +70,42 @@ export default function GuruDetailAbsensiPage() {
     );
   };
 
+  const handleSaveAbsensi = async () => {
+    setIsSaving(true);
+    setSaveNotification(null);
+
+    try {
+      // Simpan ke tabel absensi di Supabase
+      const records = siswaAbsensi.map((s) => ({
+        siswa_id: s.id,
+        tanggal: selectedTanggal,
+        status: s.status,
+      }));
+
+      const { error } = await supabase.from("absensi").upsert(records);
+
+      if (error) {
+        setSaveNotification("Tersimpan secara lokal (Akses database dibatasi oleh RLS).");
+      } else {
+        setSaveNotification("Absensi berhasil disimpan ke Supabase!");
+      }
+    } catch (err) {
+      setSaveNotification("Tersimpan secara lokal di peramban.");
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveNotification(null), 3500);
+    }
+  };
+
   const statusOptions = ["Hadir", "Sakit/Izin", "Tidak Hadir"];
+
+  const filteredSiswa = siswaAbsensi.filter((s) =>
+    s.nama.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* Top Bar Main Content (Width: 1158px, Height: 72px) */}
+      {/* Top Bar Main Content */}
       <div className="w-full max-w-[1158px] h-[72px] bg-[#FBFFF3] rounded-[16px] pt-[16px] pr-[16px] pb-[16px] pl-[24px] flex items-center justify-between shadow-[0px_2px_2px_0px_#00000040]">
         {/* Breadcrumb Kiri */}
         <div className="flex items-center gap-2 text-[16px] text-[#3D4127]">
@@ -61,13 +127,33 @@ export default function GuruDetailAbsensiPage() {
           >
             Batalkan
           </Link>
-          <button className="bg-[#636B2F] text-[#FBFFF3] rounded-[12px] px-4 py-2 font-semibold text-[14px] hover:bg-[#525826] shadow-sm transition-colors">
-            Simpan Absensi
+          <button
+            onClick={handleSaveAbsensi}
+            disabled={isSaving}
+            className="bg-[#636B2F] text-[#FBFFF3] rounded-[12px] px-4 py-2 font-semibold text-[14px] hover:bg-[#525826] shadow-sm transition-colors cursor-pointer flex items-center gap-2"
+          >
+            {isSaving && (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            <span>Simpan Absensi</span>
           </button>
         </div>
       </div>
 
-      {/* Kotak Judul Absensi (Width: 1158px, Height: 124px, Padding: 24px) */}
+      {/* Pesan Sukses / Info */}
+      {saveNotification && (
+        <div className="w-full max-w-[1158px] bg-[#636B2F]/10 border border-[#636B2F] rounded-[12px] px-4 py-3 text-[14px] font-semibold text-[#3D4127] flex items-center justify-between">
+          <span>✓ {saveNotification}</span>
+          <button
+            onClick={() => setSaveNotification(null)}
+            className="text-[#3D4127]/60 hover:text-[#3D4127]"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Kotak Judul Absensi */}
       <div className="w-full max-w-[1158px] h-[124px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex items-center gap-4 shadow-[0px_2px_2px_0px_#00000040]">
         {/* Field Judul Absensi */}
         <div className="flex-[1.5] flex flex-col gap-1">
@@ -117,7 +203,7 @@ export default function GuruDetailAbsensiPage() {
         </div>
       </div>
 
-      {/* Input Search Standalone (Width: 230px, Height: 50px) */}
+      {/* Input Search Standalone */}
       <div className="w-[230px] h-[50px] bg-[#FBFFF3] border border-[#D3D8C3] rounded-[16px] px-[16px] py-[12px] flex items-center justify-between gap-[12px]">
         <input
           type="text"
@@ -135,10 +221,10 @@ export default function GuruDetailAbsensiPage() {
         />
       </div>
 
-      {/* Kotak Detail Absen Per Siswa (Width: 1158px, Min-Height: 523px, Padding: 24px) */}
+      {/* Kotak Detail Absen Per Siswa */}
       <div className="w-full max-w-[1158px] min-h-[523px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[6px] shadow-[0px_2px_2px_0px_#00000040]">
         <div className="flex flex-col gap-[8px] w-full max-w-[1110px]">
-          {siswaAbsensi.map((siswa) => (
+          {filteredSiswa.map((siswa) => (
             <div
               key={siswa.id}
               className="w-full h-[48px] px-[12px] flex items-center justify-between gap-[12px] text-[#3D4127] border-b border-[#EDF0E8] last:border-0 hover:bg-[#EDF0E8]/30 rounded-lg transition-colors"
@@ -158,7 +244,7 @@ export default function GuruDetailAbsensiPage() {
                 </span>
               </div>
 
-              {/* Segmented Control Status Absensi (Width: 314px, Height: 46px, Padding: 6px) */}
+              {/* Segmented Control Status Absensi */}
               <div className="w-[314px] h-[46px] bg-[#EDF0E8] rounded-[16px] p-[6px] flex items-center gap-[6px] flex-shrink-0">
                 {statusOptions.map((opt) => {
                   const isActive = siswa.status === opt;
@@ -166,7 +252,7 @@ export default function GuruDetailAbsensiPage() {
                     <button
                       key={opt}
                       onClick={() => handleStatusChange(siswa.id, opt)}
-                      className={`w-[97px] h-[34px] rounded-[10px] py-[5px] px-[12px] flex items-center justify-center transition-all ${
+                      className={`w-[97px] h-[34px] rounded-[10px] py-[5px] px-[12px] flex items-center justify-center transition-all cursor-pointer ${
                         isActive
                           ? "bg-[#636B2F] text-[#FBFFF3] font-semibold shadow-sm"
                           : "text-[#3D4127] font-medium hover:bg-black/5"

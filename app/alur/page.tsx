@@ -1,24 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
+
+interface BabItem {
+  id: number;
+  key: "harti" | "surti" | "bukti" | "bakti" | "sajati";
+  title: string;
+  href: string;
+}
+
+const babs: BabItem[] = [
+  { id: 1, key: "harti", title: "BAB 1: Niti Harti", href: "/niti-harti" },
+  { id: 2, key: "surti", title: "BAB 2: Niti Surti", href: "/niti-surti" },
+  { id: 3, key: "bukti", title: "BAB 3: Niti Bukti", href: "/niti-bukti" },
+  { id: 4, key: "bakti", title: "BAB 4: Niti Bakti", href: "/niti-bakti" },
+  { id: 5, key: "sajati", title: "BAB 5: Niti Sajati", href: "/niti-sajati" },
+];
 
 export default function AlurModulPage() {
+  const { user, loading: authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [progressMap, setProgressMap] = useState<Record<string, string>>({
+    harti: "tersedia",
+    surti: "terkunci",
+    bukti: "terkunci",
+    bakti: "terkunci",
+    sajati: "terkunci",
+  });
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
 
-  // Sistem progresi: BAB 1 terbuka, yang lain terkunci.
-  const [activeBab, setActiveBab] = useState(1);
+  useEffect(() => {
+    async function loadProgress() {
+      if (!user) {
+        setIsLoadingProgress(false);
+        return;
+      }
 
-  const babs = [
-    { id: 1, title: "BAB 1: Niti Harti" },
-    { id: 2, title: "BAB 2: Niti Surti" },
-    { id: 3, title: "BAB 3: Niti Bukti" },
-    { id: 4, title: "BAB 4: Niti Bakti" },
-    { id: 5, title: "BAB 5: Niti Sajati" },
-  ];
+      try {
+        const { data, error } = await supabase
+          .from("progress_siswa")
+          .select("tahap_niti, status")
+          .eq("siswa_id", user.id);
+
+        if (error) {
+          console.warn("Gagal mengambil progress siswa:", error.message);
+        }
+
+        if (data && data.length > 0) {
+          const map: Record<string, string> = {};
+          data.forEach((row) => {
+            map[row.tahap_niti] = row.status;
+          });
+          setProgressMap((prev) => ({ ...prev, ...map }));
+        } else {
+          // Self-healing: jika akun siswa belum memiliki baris di progress_siswa
+          const initialRows = [
+            { siswa_id: user.id, tahap_niti: "harti", status: "tersedia" },
+            { siswa_id: user.id, tahap_niti: "surti", status: "terkunci" },
+            { siswa_id: user.id, tahap_niti: "bukti", status: "terkunci" },
+            { siswa_id: user.id, tahap_niti: "bakti", status: "terkunci" },
+            { siswa_id: user.id, tahap_niti: "sajati", status: "terkunci" },
+          ];
+          await supabase.from("progress_siswa").insert(initialRows);
+          setProgressMap({
+            harti: "tersedia",
+            surti: "terkunci",
+            bukti: "terkunci",
+            bakti: "terkunci",
+            sajati: "terkunci",
+          });
+        }
+      } catch (err) {
+        console.error("Error loading student progress:", err);
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    }
+
+    if (!authLoading) {
+      loadProgress();
+    }
+  }, [user, authLoading]);
+
+  // Tentukan tahap yang sedang aktif (yang belum 'disetujui') untuk tombol bawah
+  const currentUnfinishedBab = babs.find((b) => {
+    const status = progressMap[b.key] || "terkunci";
+    return status === "tersedia" || status === "sedang_dikerjakan";
+  }) || babs[0];
+
+  const allCompleted = babs.every((b) => progressMap[b.key] === "disetujui");
 
   return (
     <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center justify-between px-6 pt-4 pb-8 relative overflow-x-hidden font-sans">
@@ -38,35 +114,46 @@ export default function AlurModulPage() {
         {/* Struktur Alur Modul */}
         <div className="w-full flex flex-col items-center pb-24">
           {babs.map((bab, index) => {
-            const isActive = bab.id === activeBab;
-            const isCompleted = bab.id < activeBab;
-            const isLocked = bab.id > activeBab;
+            const status = progressMap[bab.key] || "terkunci";
+            const isCompleted = status === "disetujui";
+            const isAvailable = status === "tersedia" || status === "sedang_dikerjakan";
+            // User diizinkan membuka bab yang tersedia maupun yang sudah selesai (bisa kembali lagi)
+            const isOpen = isCompleted || isAvailable;
 
             return (
               <div key={bab.id} className="w-full flex flex-col items-center">
                 {/* Card BAB */}
-                {isActive || isCompleted ? (
-                  <div className="w-full h-[56px] rounded-[120px] border-[2px] border-[#9CA08D] bg-[#FBFFF3] flex items-center justify-between px-6 py-4 cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <Image
-                        src="/icon-bab-nyala.svg"
-                        alt="Icon BAB Aktif"
-                        width={24}
-                        height={24}
-                      />
-                      <span className="text-[#3D4127] text-[16px] font-semibold leading-[24px]">
-                        {bab.title}
-                      </span>
+                {isOpen ? (
+                  <Link href={bab.href} className="w-full block">
+                    <div className="w-full h-[56px] rounded-[120px] border-[2px] border-[#9CA08D] bg-[#FBFFF3] flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-[#f3f7ea] transition-colors shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src="/icon-bab-nyala.svg"
+                          alt="Icon BAB Aktif"
+                          width={24}
+                          height={24}
+                        />
+                        <span className="text-[#3D4127] text-[16px] font-semibold leading-[24px]">
+                          {bab.title}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isCompleted && (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#636B2F]/15 text-[#636B2F]">
+                            Selesai
+                          </span>
+                        )}
+                        <Image
+                          src="/panah-nobg.svg"
+                          alt="Arrow Right"
+                          width={20}
+                          height={20}
+                        />
+                      </div>
                     </div>
-                    <Image
-                      src="/panah-nobg.svg"
-                      alt="Arrow Right"
-                      width={20}
-                      height={20}
-                    />
-                  </div>
+                  </Link>
                 ) : (
-                  <div className="w-full h-[56px] rounded-[120px] bg-[#3D41271A] flex items-center px-6 py-4">
+                  <div className="w-full h-[56px] rounded-[120px] bg-[#3D41271A] flex items-center px-6 py-4 select-none opacity-80">
                     <div className="flex items-center gap-3">
                       <Image
                         src="/icon-gembok.svg"
@@ -98,22 +185,34 @@ export default function AlurModulPage() {
         </div>
       </div>
 
-      {/* Tombol Mulai Niti Harti (Fixed Bottom) */}
+      {/* Tombol Aksi Cepat (Fixed Bottom) */}
       <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+32px)] left-0 right-0 flex justify-center px-6 z-10 pointer-events-none">
         <div className="w-full max-w-[354px] pointer-events-auto">
-          <Link href="/niti-harti" className="block w-full">
-            <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
-              <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
-                Mulai Niti Harti
-              </span>
-              <Image
-                src="/panah-button-terang.svg"
-                alt="Panah"
-                width={20}
-                height={20}
-              />
-            </button>
-          </Link>
+          {allCompleted ? (
+            <Link href="/" className="block w-full">
+              <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
+                <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
+                  Semua Bab Selesai (Kembali)
+                </span>
+              </button>
+            </Link>
+          ) : (
+            <Link href={currentUnfinishedBab.href} className="block w-full">
+              <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
+                <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
+                  {progressMap[currentUnfinishedBab.key] === "disetujui"
+                    ? `Buka ${currentUnfinishedBab.title.split(":")[1]?.trim() || currentUnfinishedBab.title}`
+                    : `Lanjut ke ${currentUnfinishedBab.title.split(":")[1]?.trim() || currentUnfinishedBab.title}`}
+                </span>
+                <Image
+                  src="/panah-button-terang.svg"
+                  alt="Panah"
+                  width={20}
+                  height={20}
+                />
+              </button>
+            </Link>
+          )}
         </div>
       </div>
 

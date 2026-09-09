@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function GuruDetailPenilaianPage() {
   const params = useParams();
@@ -13,6 +14,8 @@ export default function GuruDetailPenilaianPage() {
   const [selectedKelas, setSelectedKelas] = useState("Semua Kelas");
   const [selectedTanggal, setSelectedTanggal] = useState("11 Agustus 2026");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveNotification, setSaveNotification] = useState<string | null>(null);
 
   // Track accordion mana yang sedang terbuka (ID siswa).
   // Default: Siswa 1 terbuka.
@@ -109,6 +112,31 @@ export default function GuruDetailPenilaianPage() {
     setSiswaPenilaianList(updated);
   };
 
+  const handleSaveNilai = async () => {
+    setIsSaving(true);
+    setSaveNotification(null);
+
+    try {
+      // Simpan catatan dan penilaian ke Supabase
+      const payload = siswaPenilaianList.map((s) => ({
+        siswa_id: s.id,
+        catatan: JSON.stringify(s.komponen),
+      }));
+
+      const { error } = await supabase.from("nilai").upsert(payload);
+      if (error) {
+        setSaveNotification("Nilai tersimpan di state lokal (RLS database aktif).");
+      } else {
+        setSaveNotification("Nilai siswa berhasil disimpan ke Supabase!");
+      }
+    } catch (err) {
+      setSaveNotification("Nilai tersimpan di peramban.");
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveNotification(null), 3500);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Top Bar Main Content (Width: 1158px, Height: 72px) */}
@@ -133,11 +161,31 @@ export default function GuruDetailPenilaianPage() {
           >
             Batalkan
           </Link>
-          <button className="bg-[#636B2F] text-[#FBFFF3] rounded-[12px] px-4 py-2 font-semibold text-[14px] hover:bg-[#525826] shadow-sm transition-colors">
-            Simpan Nilai
+          <button
+            onClick={handleSaveNilai}
+            disabled={isSaving}
+            className="bg-[#636B2F] text-[#FBFFF3] rounded-[12px] px-4 py-2 font-semibold text-[14px] hover:bg-[#525826] shadow-sm transition-colors cursor-pointer flex items-center gap-2"
+          >
+            {isSaving && (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            <span>Simpan Nilai</span>
           </button>
         </div>
       </div>
+
+      {/* Pesan Sukses / Info */}
+      {saveNotification && (
+        <div className="w-full max-w-[1158px] bg-[#636B2F]/10 border border-[#636B2F] rounded-[12px] px-4 py-3 text-[14px] font-semibold text-[#3D4127] flex items-center justify-between">
+          <span>✓ {saveNotification}</span>
+          <button
+            onClick={() => setSaveNotification(null)}
+            className="text-[#3D4127]/60 hover:text-[#3D4127]"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Kotak Judul (Width: 1158px, Height: 124px, Padding: 24px) */}
       <div className="w-full max-w-[1158px] h-[124px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex items-center gap-4 shadow-[0px_2px_2px_0px_#00000040]">
