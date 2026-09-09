@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
+import LockedModal from "@/components/LockedModal";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
 
@@ -26,6 +28,11 @@ const babs: BabItem[] = [
 export default function AlurModulPage() {
   const { user, loading: authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [lockedModalData, setLockedModalData] = useState<{
+    isOpen: boolean;
+    stageName: string;
+    requiredStageName: string;
+  } | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, string>>({
     harti: "tersedia",
     surti: "terkunci",
@@ -97,7 +104,15 @@ export default function AlurModulPage() {
   const allCompleted = babs.every((b) => progressMap[b.key] === "disetujui");
 
   return (
-    <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center justify-between px-6 pt-4 pb-8 relative overflow-x-hidden font-sans">
+    <AuthGuard>
+      <LockedModal
+        isOpen={!!lockedModalData?.isOpen}
+        stageName={lockedModalData?.stageName}
+        requiredStageName={lockedModalData?.requiredStageName}
+        actionText="Mengerti"
+        onAction={() => setLockedModalData(null)}
+      />
+      <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center justify-between px-6 pt-4 pb-8 relative overflow-x-hidden font-sans">
       <div className="w-full max-w-[354px] flex flex-col items-center gap-6 z-10 flex-1">
         {/* Topbar Reusable */}
         <div className="w-full z-20">
@@ -153,7 +168,18 @@ export default function AlurModulPage() {
                     </div>
                   </Link>
                 ) : (
-                  <div className="w-full h-[56px] rounded-[120px] bg-[#3D41271A] flex items-center px-6 py-4 select-none opacity-80">
+                  <div
+                    onClick={() => {
+                      const prevBab =
+                        index > 0 ? babs[index - 1].title : "sebelumnya";
+                      setLockedModalData({
+                        isOpen: true,
+                        stageName: bab.title,
+                        requiredStageName: prevBab,
+                      });
+                    }}
+                    className="w-full h-[56px] rounded-[120px] bg-[#3D41271A] hover:bg-[#3D412726] active:scale-[0.99] flex items-center px-6 py-4 select-none opacity-85 cursor-pointer transition-all"
+                  >
                     <div className="flex items-center gap-3">
                       <Image
                         src="/icon-gembok.svg"
@@ -183,40 +209,46 @@ export default function AlurModulPage() {
             );
           })}
         </div>
-      </div>
 
-      {/* Tombol Aksi Cepat (Fixed Bottom) */}
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+32px)] left-0 right-0 flex justify-center px-6 z-10 pointer-events-none">
-        <div className="w-full max-w-[354px] pointer-events-auto">
-          {allCompleted ? (
-            <Link href="/" className="block w-full">
-              <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
-                <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
-                  Semua Bab Selesai (Kembali)
-                </span>
-              </button>
-            </Link>
-          ) : (
-            <Link href={currentUnfinishedBab.href} className="block w-full">
-              <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
-                <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
-                  {progressMap[currentUnfinishedBab.key] === "disetujui"
-                    ? `Buka ${currentUnfinishedBab.title.split(":")[1]?.trim() || currentUnfinishedBab.title}`
-                    : `Lanjut ke ${currentUnfinishedBab.title.split(":")[1]?.trim() || currentUnfinishedBab.title}`}
-                </span>
-                <Image
-                  src="/panah-button-terang.svg"
-                  alt="Panah"
-                  width={20}
-                  height={20}
-                />
-              </button>
-            </Link>
+          {/* Loading Indicator jika progress sedang diambil */}
+          {isLoadingProgress && (
+            <p className="text-xs text-[#3D4127]/60 animate-pulse -mt-20 mb-20">
+              Memuat data perkembangan alur...
+            </p>
           )}
-        </div>
-      </div>
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-    </main>
+          {/* Tombol Aksi di Bawah (Sticky/Fixed) */}
+          <div className="fixed bottom-6 w-full max-w-[354px] z-20">
+            {allCompleted ? (
+              <Link href="/niti-harti" className="block w-full">
+                <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
+                  <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
+                    Semua Bab Selesai (Kembali)
+                  </span>
+                </button>
+              </Link>
+            ) : (
+              <Link href={currentUnfinishedBab.href} className="block w-full">
+                <button className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none">
+                  <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
+                    {progressMap[currentUnfinishedBab.key] === "disetujui"
+                      ? `Buka ${currentUnfinishedBab.title.split(":")[1]?.trim() || currentUnfinishedBab.title}`
+                      : `Lanjut ke ${currentUnfinishedBab.title.split(":")[1]?.trim() || currentUnfinishedBab.title}`}
+                  </span>
+                  <Image
+                    src="/panah-button-terang.svg"
+                    alt="Panah"
+                    width={20}
+                    height={20}
+                  />
+                </button>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </main>
+    </AuthGuard>
   );
 }

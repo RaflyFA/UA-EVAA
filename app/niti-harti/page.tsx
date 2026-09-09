@@ -5,8 +5,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
+import LockedModal from "@/components/LockedModal";
 
 interface BahanBacaanItem {
   id: number;
@@ -39,6 +41,7 @@ export default function NitiHartiPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openStates, setOpenStates] = useState<Record<number, boolean>>({
     1: false,
@@ -63,8 +66,8 @@ export default function NitiHartiPage() {
         .maybeSingle();
 
       if (data && data.status === "terkunci") {
-        alert("Tahap ini masih terkunci!");
-        router.push("/alur");
+        setIsLocked(true);
+        return;
       }
     }
 
@@ -131,7 +134,13 @@ export default function NitiHartiPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-32 relative overflow-x-hidden font-sans">
+    <AuthGuard>
+      <LockedModal
+        isOpen={isLocked}
+        stageName="Niti Harti (BAB 1)"
+        onAction={() => router.push("/alur")}
+      />
+      <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-32 relative overflow-x-hidden font-sans">
       {/* Container utama dengan lebar maksimum 354px */}
       <div className="w-full max-w-[354px] flex flex-col items-center gap-6 z-10 flex-1">
         {/* Topbar Reusable */}
@@ -279,5 +288,6 @@ export default function NitiHartiPage() {
       {/* Sidebar Reusable */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </main>
+  </AuthGuard>
   );
 }

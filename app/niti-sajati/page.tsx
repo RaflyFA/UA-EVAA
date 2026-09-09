@@ -6,13 +6,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
+import LockedModal from "@/components/LockedModal";
 
 export default function NitiSajatiPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   // Proteksi akses & tandai Niti Sajati selesai saat dikunjungi
   useEffect(() => {
@@ -27,8 +30,7 @@ export default function NitiSajatiPage() {
         .maybeSingle();
 
       if (prog && prog.status === "terkunci") {
-        alert("Tahap Niti Sajati masih terkunci! Selesaikan tahap sebelumnya terlebih dahulu.");
-        router.push("/alur");
+        setIsLocked(true);
         return;
       }
 
@@ -78,7 +80,14 @@ export default function NitiSajatiPage() {
   ];
 
   return (
-    <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-[140px] relative overflow-x-hidden font-sans">
+    <AuthGuard>
+      <LockedModal
+        isOpen={isLocked}
+        stageName="Niti Sajati (BAB 5)"
+        requiredStageName="Niti Bakti (BAB 4)"
+        onAction={() => router.push("/alur")}
+      />
+      <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-[140px] relative overflow-x-hidden font-sans">
       {/* Container utama dengan lebar maksimum 354px */}
       <div className="w-full max-w-[354px] flex flex-col items-center gap-6 z-10 flex-1">
         {/* Topbar Reusable */}
@@ -246,5 +255,6 @@ export default function NitiSajatiPage() {
       {/* Sidebar Reusable */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </main>
+  </AuthGuard>
   );
 }

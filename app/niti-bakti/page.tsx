@@ -6,13 +6,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
+import LockedModal from "@/components/LockedModal";
 
 export default function NitiBaktiPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>("daur-ulang");
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success">("idle");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -34,8 +37,7 @@ export default function NitiBaktiPage() {
         .maybeSingle();
 
       if (prog && prog.status === "terkunci") {
-        alert("Tahap Niti Bakti masih terkunci! Selesaikan tahap sebelumnya terlebih dahulu.");
-        router.push("/alur");
+        setIsLocked(true);
         return;
       }
 
@@ -85,12 +87,12 @@ export default function NitiBaktiPage() {
 
       // Pastikan pengguna sudah masuk
       if (!profile?.id) {
-        alert("Anda belum masuk! Silakan masuk dengan akun Siswa terlebih dahulu untuk mengunggah tugas.");
+        setErrorMessage("Anda belum masuk! Silakan masuk dengan akun Siswa terlebih dahulu untuk mengunggah tugas.");
         return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        alert("Ukuran file melebihi batas 10 MB!");
+        setErrorMessage("Ukuran berkas melebihi batas maksimal 10 MB!");
         return;
       }
 
@@ -207,7 +209,14 @@ export default function NitiBaktiPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-[140px] relative overflow-x-hidden font-sans">
+    <AuthGuard>
+      <LockedModal
+        isOpen={isLocked}
+        stageName="Niti Bakti (BAB 4)"
+        requiredStageName="Niti Bukti (BAB 3)"
+        onAction={() => router.push("/alur")}
+      />
+      <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-[140px] relative overflow-x-hidden font-sans">
       {/* Container utama dengan lebar maksimum 354px */}
       <div className="w-full max-w-[354px] flex flex-col items-center gap-6 z-10 flex-1">
         {/* Topbar Reusable */}
@@ -469,5 +478,6 @@ export default function NitiBaktiPage() {
       {/* Sidebar Reusable */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </main>
+  </AuthGuard>
   );
 }

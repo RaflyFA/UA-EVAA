@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import GuruTopbar from "@/components/guru/GuruTopbar";
 import GuruSidebar from "@/components/guru/GuruSidebar";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function GuruLayout({
   children,
@@ -17,18 +18,20 @@ export default function GuruLayout({
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#EDF0E8] flex flex-col font-sans">
-      {/* Topbar Guru (Fixed top) */}
-      <GuruTopbar />
+    <AuthGuard>
+      <div className="min-h-screen w-full bg-[#EDF0E8] flex flex-col font-sans">
+        {/* Topbar Guru (Fixed top) */}
+        <GuruTopbar />
 
-      {/* Main Container Layout (Sidebar + Content) */}
-      <div className="flex-1 w-full flex gap-[12px] p-[12px] max-w-[1512px] mx-auto">
-        {/* Sidebar Guru */}
-        <GuruSidebar />
+        {/* Main Container Layout (Sidebar + Content) */}
+        <div className="flex-1 w-full flex gap-[12px] p-[12px] max-w-[1512px] mx-auto">
+          {/* Sidebar Guru */}
+          <GuruSidebar />
 
-        {/* Dynamic Page Content */}
-        <div className="flex-1 min-w-0">{children}</div>
+          {/* Dynamic Page Content */}
+          <div className="flex-1 min-w-0">{children}</div>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

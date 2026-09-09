@@ -10,7 +10,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   // State untuk melacak dropdown mana yang terbuka
   const [activeDropdown, setActiveDropdown] = useState<"tentang" | "alur" | null>(null);
 
@@ -195,7 +195,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           >
             <div className="w-full h-14 hover:bg-[#D3D8C3] transition-colors duration-200 px-6 flex items-center justify-between text-[#3D4127] select-none">
               <Link
-                href="/alur"
+                href={user ? "/alur" : "/login"}
                 onClick={onClose}
                 className="flex-1 h-full flex items-center text-[#3D4127] cursor-pointer"
                 style={{
@@ -248,7 +248,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               ].map((bab) => (
                 <Link
                   key={bab.name}
-                  href={bab.href}
+                  href={user ? bab.href : "/login"}
                   onClick={onClose}
                   className="text-[#3D4127] hover:opacity-70 transition-opacity"
                   style={{
@@ -266,7 +266,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* Tugas Button */}
           <Link
-            href="/niti-bukti"
+            href={user ? "/niti-bukti" : "/login"}
             onClick={onClose}
             className="w-full h-14 bg-[#FBFFF3] hover:bg-[#D3D8C3] transition-colors duration-200 rounded-[24px] px-6 flex items-center justify-start text-[#3D4127] shadow-[0px_2px_2px_0px_#00000040] select-none"
             style={{

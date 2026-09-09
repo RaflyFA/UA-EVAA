@@ -5,8 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AboutPage() {
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -169,7 +171,7 @@ export default function AboutPage() {
         {/* Tombol "Alur Modul" di bagian bawah */}
         <div className="w-full mt-auto pt-6">
           <Link
-            href="/alur"
+            href={user ? "/alur" : "/login"}
             className="w-full h-[56px] bg-[#636B2F] rounded-[120px] px-6 py-4 flex items-center justify-center gap-2 hover:bg-[#525926] active:scale-[0.98] transition-all shadow-md group"
           >
             <span className="text-[14px] font-[600] leading-[24px] text-[#FBFFF3]">
