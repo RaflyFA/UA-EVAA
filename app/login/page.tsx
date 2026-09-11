@@ -460,8 +460,8 @@ function LoginForm() {
                     </span>
                   </div>
                   {registerRole === "siswa" && (
-                    <div className="ml-auto w-4 h-4 rounded-full bg-[#5B6628] text-white flex items-center justify-center text-[10px]">
-                      ✓
+                    <div className="ml-auto text-white flex items-center justify-center text-[10px]">
+                      
                     </div>
                   )}
                 </button>
@@ -511,8 +511,8 @@ function LoginForm() {
                     </span>
                   </div>
                   {registerRole === "guru" && (
-                    <div className="ml-auto w-4 h-4 rounded-full bg-[#5B6628] text-white flex items-center justify-center text-[10px]">
-                      ✓
+                    <div className="ml-auto text-white flex items-center justify-center text-[10px]">
+                      
                     </div>
                   )}
                 </button>
