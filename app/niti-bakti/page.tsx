@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
-import AuthGuard from "@/components/AuthGuard";
+import SiswaGuard from "@/components/SiswaGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
 import LockedModal from "@/components/LockedModal";
@@ -209,7 +209,7 @@ export default function NitiBaktiPage() {
   };
 
   return (
-    <AuthGuard>
+    <SiswaGuard>
       <LockedModal
         isOpen={isLocked}
         stageName="Niti Bakti (BAB 4)"
@@ -478,6 +478,6 @@ export default function NitiBaktiPage() {
       {/* Sidebar Reusable */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </main>
-  </AuthGuard>
+  </SiswaGuard>
   );
 }

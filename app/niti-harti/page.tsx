@@ -5,18 +5,25 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
-import AuthGuard from "@/components/AuthGuard";
+import SiswaGuard from "@/components/SiswaGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
 import LockedModal from "@/components/LockedModal";
 
 interface BahanBacaanItem {
-  id: number;
+  id: string | number;
   title: string;
   description: string;
 }
 
-const bahanBacaanData: BahanBacaanItem[] = [
+interface VideoItem {
+  id: string | number;
+  judul: string;
+  url: string;
+  image?: string;
+}
+
+const fallbackBahanBacaan: BahanBacaanItem[] = [
   {
     id: 1,
     title: "Bahan Bacaan 1",
@@ -37,24 +44,46 @@ const bahanBacaanData: BahanBacaanItem[] = [
   },
 ];
 
+const fallbackVideos: VideoItem[] = [
+  {
+    id: 1,
+    judul: "Belajar dari kearifan Lokal Kampung Adat Naga",
+    url: "",
+    image: "/lampiran-2.png",
+  },
+  {
+    id: 2,
+    judul: "Belajar dari kearifan Lokal Masyarakat Adat Baduy",
+    url: "",
+    image: "/lampiran-3.png",
+  },
+];
+
+// Helper untuk mengekstrak URL embed YouTube
+function getYoutubeEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11
+    ? `https://www.youtube.com/embed/${match[2]}`
+    : null;
+}
+
 export default function NitiHartiPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [openStates, setOpenStates] = useState<Record<number, boolean>>({
-    1: false,
-    2: false,
-    3: false,
-  });
+  const [bacaanList, setBacaanList] = useState<BahanBacaanItem[]>(fallbackBahanBacaan);
+  const [videoList, setVideoList] = useState<VideoItem[]>(fallbackVideos);
+  const [openStates, setOpenStates] = useState<Record<string, boolean>>({});
 
-  // Proteksi akses: pastikan Niti Harti tidak terkunci
+  // 1. Proteksi akses: pastikan Niti Harti tidak terkunci
   useEffect(() => {
     async function checkAccess() {
       if (authLoading) return;
       if (!user) {
-        // Jika belum login, biarkan atau redirect ke login
         return;
       }
 
@@ -74,10 +103,54 @@ export default function NitiHartiPage() {
     checkAccess();
   }, [user, authLoading, router]);
 
-  const toggleAccordion = (id: number) => {
+  // 2. Mengambil konten modul dinamis dari Supabase
+  useEffect(() => {
+    async function fetchKontenModul() {
+      try {
+        const { data, error } = await supabase
+          .from("konten_modul")
+          .select("*")
+          .eq("tahap_niti", "harti")
+          .order("urutan", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const loadedBacaan = data
+            .filter((item) => item.tipe_konten === "bacaan")
+            .map((item) => ({
+              id: item.id,
+              title: item.judul || "Bahan Bacaan",
+              description: item.deskripsi || "",
+            }));
+
+          const loadedVideos = data
+            .filter((item) => item.tipe_konten === "video")
+            .map((item, idx) => ({
+              id: item.id,
+              judul: item.judul || "Video Pembelajaran",
+              url: item.url_youtube || "",
+              image: idx % 2 === 0 ? "/lampiran-2.png" : "/lampiran-3.png",
+            }));
+
+          if (loadedBacaan.length > 0) {
+            setBacaanList(loadedBacaan);
+          }
+          if (loadedVideos.length > 0) {
+            setVideoList(loadedVideos);
+          }
+        }
+      } catch (err) {
+        console.error("Gagal mengambil konten modul Niti Harti:", err);
+      }
+    }
+
+    fetchKontenModul();
+  }, []);
+
+  const toggleAccordion = (id: string | number) => {
+    const key = String(id);
     setOpenStates((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [key]: !prev[key],
     }));
   };
 
@@ -134,160 +207,165 @@ export default function NitiHartiPage() {
   };
 
   return (
-    <AuthGuard>
+    <SiswaGuard>
       <LockedModal
         isOpen={isLocked}
         stageName="Niti Harti (BAB 1)"
         onAction={() => router.push("/alur")}
       />
       <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-6 pt-4 pb-32 relative overflow-x-hidden font-sans">
-      {/* Container utama dengan lebar maksimum 354px */}
-      <div className="w-full max-w-[354px] flex flex-col items-center gap-6 z-10 flex-1">
-        {/* Topbar Reusable */}
-        <div className="w-full z-20">
-          <Topbar onMenuClick={() => setIsSidebarOpen(true)} variant="dark" />
-        </div>
-
-        {/* Header Niti Harti */}
-        <div className="relative w-full max-w-[354px] h-[140px] bg-[#EDF0E8] rounded-bl-[24px] rounded-br-[24px] overflow-hidden shadow-md flex flex-col justify-end">
-          <div className="absolute right-0 top-0 bottom-0 w-[160px] pointer-events-none flex items-center justify-center z-10">
-            <Image
-              src="/lampiran-1.png"
-              alt="Niti Harti Illustration"
-              width={140}
-              height={140}
-              priority
-              className="object-contain object-right"
-            />
+        {/* Container utama dengan lebar maksimum 354px */}
+        <div className="w-full max-w-[354px] flex flex-col items-center gap-6 z-10 flex-1">
+          {/* Topbar Reusable */}
+          <div className="w-full z-20">
+            <Topbar onMenuClick={() => setIsSidebarOpen(true)} variant="dark" />
           </div>
 
-          <div
-            className="absolute inset-0 rounded-bl-[24px] rounded-br-[24px] pointer-events-none z-20"
-            style={{
-              background: "linear-gradient(180deg, rgba(99, 107, 47, 0) 0%, #636B2F 100%)",
-              opacity: 1,
-            }}
-          />
+          {/* Header Niti Harti */}
+          <div className="relative w-full max-w-[354px] h-[140px] bg-[#EDF0E8] rounded-bl-[24px] rounded-br-[24px] overflow-hidden shadow-md flex flex-col justify-end">
+            <div className="absolute right-0 top-0 bottom-0 w-[160px] pointer-events-none flex items-center justify-center z-10">
+              <Image
+                src="/lampiran-1.png"
+                alt="Niti Harti Illustration"
+                width={140}
+                height={140}
+                priority
+                className="object-contain object-right"
+              />
+            </div>
 
-          <div className="relative z-30 w-full h-full p-6 flex flex-col justify-end gap-[12px]">
-            <div className="flex flex-col gap-1 w-full max-w-[210px]">
-              <h1 className="font-bold text-[32px] leading-[38px] text-[#FBFFF3]">
-                Niti Harti
-              </h1>
-              <p className="font-medium text-[12px] leading-[20px] text-[#FBFFF3]">
-                Pahami konsep dasar dan teorinya.
-              </p>
+            <div
+              className="absolute inset-0 rounded-bl-[24px] rounded-br-[24px] pointer-events-none z-20"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(99, 107, 47, 0) 0%, #636B2F 100%)",
+                opacity: 1,
+              }}
+            />
+
+            <div className="relative z-30 w-full h-full p-6 flex flex-col justify-end gap-[12px]">
+              <div className="flex flex-col gap-1 w-full max-w-[210px]">
+                <h1 className="font-bold text-[32px] leading-[38px] text-[#FBFFF3]">
+                  Niti Harti
+                </h1>
+                <p className="font-medium text-[12px] leading-[20px] text-[#FBFFF3]">
+                  Pahami konsep dasar dan teorinya.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* List Dropdown Bahan Bacaan 1, 2, 3 */}
-        <div className="flex flex-col gap-4 w-full">
-          {bahanBacaanData.map((item) => {
-            const isOpen = openStates[item.id];
+          {/* List Bahan Bacaan Dinamis */}
+          <div className="flex flex-col gap-4 w-full">
+            {bacaanList.map((item) => {
+              const isOpen = openStates[String(item.id)] ?? false;
+              return (
+                <div
+                  key={item.id}
+                  className="w-full bg-[#FBFFF3] rounded-[24px] px-6 py-5 shadow-[0px_2px_2px_0px_#00000040] flex flex-col justify-start transition-all duration-300"
+                >
+                  {/* Header Card (Judul & Toggle Arrow) */}
+                  <button
+                    onClick={() => toggleAccordion(item.id)}
+                    className="w-full flex items-start justify-between text-left cursor-pointer focus:outline-none select-none gap-3"
+                    aria-expanded={isOpen}
+                  >
+                    <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127] tracking-[0%]">
+                      {item.title}
+                    </h2>
+                    <div className="mt-0.5 shrink-0 flex items-center justify-center">
+                      <Image
+                        src="/panah-nobg.svg"
+                        alt="Toggle Accordion"
+                        width={18}
+                        height={18}
+                        className={`transition-transform duration-300 object-contain ${
+                          isOpen ? "-rotate-90" : "rotate-90"
+                        }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Content Deskripsi Accordion */}
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isOpen
+                        ? "grid-rows-[1fr] opacity-100 mt-3 pt-2 border-t border-[#3D4127]/10"
+                        : "grid-rows-[0fr] opacity-0 mt-0 pt-0 border-t-0 border-transparent"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="text-[14px] font-[500] leading-[20px] text-[#3D4127] tracking-[0%] whitespace-pre-line">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* List Section Video Dinamis */}
+          {videoList.map((video) => {
+            const embedUrl = getYoutubeEmbedUrl(video.url);
             return (
               <div
-                key={item.id}
-                className="w-full bg-[#FBFFF3] rounded-[24px] px-6 py-5 shadow-[0px_2px_2px_0px_#00000040] flex flex-col justify-start transition-all duration-300"
+                key={video.id}
+                className="w-full bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-4"
               >
-                {/* Header Card (Judul & Toggle Arrow) */}
-                <button
-                  onClick={() => toggleAccordion(item.id)}
-                  className="w-full flex items-start justify-between text-left cursor-pointer focus:outline-none select-none gap-3"
-                  aria-expanded={isOpen}
-                >
-                  <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127] tracking-[0%]">
-                    {item.title}
-                  </h2>
-                  <div className="mt-0.5 shrink-0 flex items-center justify-center">
-                    <Image
-                      src="/panah-nobg.svg"
-                      alt="Toggle Accordion"
-                      width={18}
-                      height={18}
-                      className={`transition-transform duration-300 object-contain ${
-                        isOpen ? "-rotate-90" : "rotate-90"
-                      }`}
+                <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
+                  {video.judul}
+                </h2>
+                <div className="relative w-full rounded-[16px] overflow-hidden bg-black/5 aspect-video flex items-center justify-center">
+                  {embedUrl ? (
+                    <iframe
+                      src={embedUrl}
+                      title={video.judul}
+                      className="w-full h-full border-0 rounded-[16px]"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
                     />
-                  </div>
-                </button>
-
-                {/* Content Deskripsi Accordion */}
-                <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isOpen
-                      ? "grid-rows-[1fr] opacity-100 mt-3 pt-2 border-t border-[#3D4127]/10"
-                      : "grid-rows-[0fr] opacity-0 mt-0 pt-0 border-t-0 border-transparent"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <p className="text-[14px] font-[500] leading-[20px] text-[#3D4127] tracking-[0%]">
-                      {item.description}
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={video.image || "/lampiran-2.png"}
+                        alt={video.judul}
+                        fill
+                        className="object-cover rounded-[16px]"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Section Video Kearifan Lokal Kampung Adat Naga */}
-        <div className="w-full bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-4">
-          <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
-            Belajar dari kearifan Lokal Kampung Adat Naga
-          </h2>
-          <div className="relative w-full rounded-[16px] overflow-hidden">
-            <Image
-              src="/lampiran-2.png"
-              alt="Belajar dari kearifan Lokal Kampung Adat Naga"
-              width={306}
-              height={172}
-              className="w-full h-auto object-cover rounded-[16px]"
-            />
+        {/* Tombol Lanjut ke Niti Surti (Fixed Bottom) */}
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+32px)] left-0 right-0 flex justify-center px-6 z-10 pointer-events-none">
+          <div className="w-full max-w-[354px] pointer-events-auto">
+            <button
+              onClick={handleLanjut}
+              disabled={isSubmitting}
+              className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none disabled:opacity-75 cursor-pointer"
+            >
+              <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
+                {isSubmitting ? "Menyimpan..." : "Lanjut ke Niti Surti"}
+              </span>
+              <Image
+                src="/panah-button-terang.svg"
+                alt="Panah"
+                width={20}
+                height={20}
+              />
+            </button>
           </div>
         </div>
 
-        {/* Section Video Kearifan Lokal Masyarakat Adat Baduy */}
-        <div className="w-full bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-4">
-          <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
-            Belajar dari kearifan Lokal Masyarakat Adat Baduy
-          </h2>
-          <div className="relative w-full rounded-[16px] overflow-hidden">
-            <Image
-              src="/lampiran-3.png"
-              alt="Belajar dari kearifan Lokal Masyarakat Adat Baduy"
-              width={306}
-              height={172}
-              className="w-full h-auto object-cover rounded-[16px]"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Tombol Lanjut ke Niti Surti (Fixed Bottom) */}
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+32px)] left-0 right-0 flex justify-center px-6 z-10 pointer-events-none">
-        <div className="w-full max-w-[354px] pointer-events-auto">
-          <button
-            onClick={handleLanjut}
-            disabled={isSubmitting}
-            className="w-full h-[56px] bg-[#636B2F] rounded-[120px] flex items-center justify-center gap-2 hover:bg-[#525826] transition-colors shadow-lg focus:outline-none disabled:opacity-75 cursor-pointer"
-          >
-            <span className="text-[#FBFFF3] text-[16px] font-semibold leading-[24px]">
-              {isSubmitting ? "Menyimpan..." : "Lanjut ke Niti Surti"}
-            </span>
-            <Image
-              src="/panah-button-terang.svg"
-              alt="Panah"
-              width={20}
-              height={20}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Sidebar Reusable */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-    </main>
-  </AuthGuard>
+        {/* Sidebar Reusable */}
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </main>
+    </SiswaGuard>
   );
 }
+

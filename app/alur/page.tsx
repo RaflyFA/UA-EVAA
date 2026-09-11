@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
-import AuthGuard from "@/components/AuthGuard";
+import SiswaGuard from "@/components/SiswaGuard";
 import LockedModal from "@/components/LockedModal";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
@@ -104,7 +104,7 @@ export default function AlurModulPage() {
   const allCompleted = babs.every((b) => progressMap[b.key] === "disetujui");
 
   return (
-    <AuthGuard>
+    <SiswaGuard>
       <LockedModal
         isOpen={!!lockedModalData?.isOpen}
         stageName={lockedModalData?.stageName}
@@ -249,6 +249,6 @@ export default function AlurModulPage() {
 
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       </main>
-    </AuthGuard>
+    </SiswaGuard>
   );
 }

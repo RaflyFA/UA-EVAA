@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
-import AuthGuard from "@/components/AuthGuard";
+import SiswaGuard from "@/components/SiswaGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
 import LockedModal from "@/components/LockedModal";
@@ -120,7 +120,7 @@ export default function NitiSurtiPage() {
   };
 
   return (
-    <AuthGuard>
+    <SiswaGuard>
       <LockedModal
         isOpen={isLocked}
         stageName="Niti Surti (BAB 2)"
@@ -267,6 +267,6 @@ export default function NitiSurtiPage() {
       {/* Sidebar Reusable */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </main>
-  </AuthGuard>
+  </SiswaGuard>
   );
 }

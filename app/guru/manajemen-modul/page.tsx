@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
 
 interface ModuleItem {
   number: string;
   title: string;
   description: string;
   image: string;
+  slug: string;
 }
 
 const defaultModules: ModuleItem[] = [
@@ -18,64 +18,40 @@ const defaultModules: ModuleItem[] = [
     title: "Niti Harti",
     description: "Pahami konsep dasar dan teorinya.",
     image: "/gambar 4.png",
+    slug: "niti-harti",
   },
   {
     number: "2",
     title: "Niti Surti",
     description: "Mengelompokkan Informasi.",
     image: "/niti-surti.png",
+    slug: "niti-surti",
   },
   {
     number: "3",
     title: "Niti Bukti",
     description: "Unggah dan Presentasikan.",
     image: "/niti-bukti-icon.png",
+    slug: "niti-bukti",
   },
   {
     number: "4",
     title: "Niti Bakti",
     description: "Aksi nyata dari tiga kategori lingkungan.",
     image: "/niti-bakti.png",
+    slug: "niti-bakti",
   },
   {
     number: "5",
     title: "Niti Sajati",
     description: "Pencapaian Pembelajaran.",
     image: "/niti-sajati.png",
+    slug: "niti-sajati",
   },
 ];
 
 export default function GuruManajemenModulPage() {
-  const [modules, setModules] = useState<ModuleItem[]>(defaultModules);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    async function loadModules() {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from("konten_modul")
-          .select("*")
-          .order("urutan", { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          const mapped: ModuleItem[] = data.map((item, idx) => ({
-            number: String(item.urutan || idx + 1),
-            title: item.judul || `Modul ${idx + 1}`,
-            description: item.deskripsi || "Deskripsi modul pembelajaran.",
-            image: defaultModules[idx]?.image || "/gambar 4.png",
-          }));
-          setModules(mapped);
-        }
-      } catch (err) {
-        console.error("Error fetching modules from Supabase:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadModules();
-  }, []);
+  const [modules] = useState<ModuleItem[]>(defaultModules);
 
   return (
     <div className="w-full bg-[#FBFFF3] rounded-[16px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-6">
@@ -83,11 +59,6 @@ export default function GuruManajemenModulPage() {
       <div className="flex items-center justify-between w-full pb-2">
         <div className="flex items-center gap-3">
           <h1 className="text-[20px] font-bold text-[#3D4127]">Alur Modul</h1>
-          {isLoading && (
-            <span className="text-[12px] text-[#636B2F] animate-pulse">
-              Memuat data...
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -131,7 +102,7 @@ export default function GuruManajemenModulPage() {
         {modules.map((mod) => (
           <Link
             key={mod.number}
-            href={`/guru/manajemen-modul/${mod.title.toLowerCase().replace(/\s+/g, "-")}`}
+            href={`/guru/manajemen-modul/${mod.slug}`}
             className="block w-full"
           >
             <div className="relative w-full h-[180px] bg-[#EDF0E8] rounded-[20px] overflow-hidden shadow-md group cursor-pointer flex flex-col justify-end p-5 transition-transform duration-200 hover:-translate-y-1">
@@ -173,7 +144,10 @@ export default function GuruManajemenModulPage() {
         ))}
 
         {/* Card 6: Tambahkan Alur */}
-        <div className="w-full h-[180px] bg-[#EDF0E8]/60 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[20px] flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 group">
+        <div
+          onClick={() => alert("Penambahan alur modul kustom akan tersedia pada pembaruan kurikulum mendatang. Saat ini silakan kelola 5 alur Niti yang tersedia.")}
+          className="w-full h-[180px] bg-[#EDF0E8]/60 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[20px] flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 group"
+        >
           <div className="w-10 h-10 rounded-full bg-[#FBFFF3] flex items-center justify-center text-[#818671] group-hover:text-[#5B6628] group-hover:scale-110 transition-all shadow-sm">
             <svg
               width="24"

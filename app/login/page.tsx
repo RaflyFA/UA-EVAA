@@ -25,6 +25,7 @@ function LoginForm() {
   const [registerRole, setRegisterRole] = useState<"siswa" | "guru">("siswa");
   const [kelas, setKelas] = useState("VII-A");
   const [nomorInduk, setNomorInduk] = useState("");
+  const [teacherPin, setTeacherPin] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -101,7 +102,17 @@ function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
-    setSuccessMessage(null);
+    // Validasi Sandi Khusus Pengajar jika mendaftar sebagai Guru
+    if (registerRole === "guru") {
+      const validPin = process.env.NEXT_PUBLIC_TEACHER_PIN || "GURU-EVAA-2026";
+      if (!teacherPin || teacherPin.trim() !== validPin) {
+        setErrorMessage(
+          "Sandi Khusus Pengajar tidak valid. Silakan masukkan sandi resmi dari sekolah untuk mendaftar sebagai Guru."
+        );
+        setIsLoading(false);
+        return;
+      }
+    }
 
     const email = formatEmail(emailOrUsername);
 
@@ -323,35 +334,58 @@ function LoginForm() {
                     setForgotEmail(emailOrUsername);
                   }
                 }}
-                className="text-[13px] font-[500] text-[#FBFFF3]/80 hover:text-white transition-colors underline underline-offset-2 cursor-pointer"
+                className="text-[13px] font-[500] text-[#FBFFF3]/80 hover:text-white transition-color sunderline underline-offset-2 cursor-pointer mr-1"
               >
                 Lupa Kata Sandi?
               </button>
             </div>
 
-            {/* Tombol Masuk */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer mt-1"
-            >
-              {isLoading ? (
-                <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span className="text-[18px] font-[700] text-[#3D4127]">
-                    Masuk
-                  </span>
-                  <Image
-                    src="/panah hitam.png"
-                    alt="Panah Masuk"
-                    width={22}
-                    height={18}
-                    className="object-contain"
-                  />
-                </>
-              )}
-            </button>
+            {/* Tombol Aksi: Kembali ke Beranda (Icon) & Masuk */}
+            <div className="w-full flex items-center gap-2.5 mt-1">
+              <Link
+                href="/"
+                title="Kembali ke Beranda"
+                aria-label="Kembali ke Beranda"
+                className="w-[54px] h-[54px] flex-shrink-0 bg-[#FBFFF330] hover:bg-[#FBFFF345] border border-[#FBFFF340] rounded-[16px] flex items-center justify-center text-[#FBFFF3] hover:text-white transition-all shadow-[0px_4px_4px_0px_#0000001A] active:scale-95 cursor-pointer"
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </Link>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span className="text-[18px] font-[700] text-[#3D4127]">
+                      Masuk
+                    </span>
+                    <Image
+                      src="/panah hitam.png"
+                      alt="Panah Masuk"
+                      width={22}
+                      height={18}
+                      className="object-contain"
+                    />
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         )}
 
@@ -515,11 +549,31 @@ function LoginForm() {
                   type="text"
                   value={nomorInduk}
                   onChange={(e) => setNomorInduk(e.target.value)}
-                  placeholder={registerRole === "siswa" ? "NISN / No. Induk" : "NIP"}
+                  placeholder={registerRole === "siswa" ? "NISN (Opsional)" : "NIP (Opsional)"}
                   className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[14px] font-[500] focus:outline-none"
                 />
               </div>
             </div>
+
+            {/* Khusus Guru: Input Sandi Khusus Pengajar */}
+            {registerRole === "guru" && (
+              <div className="w-full flex flex-col gap-1.5">
+                <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#f59e0b]/70 rounded-[16px] px-[16px] flex items-center gap-[12px]">
+                  <span className="text-[16px] select-none">🔑</span>
+                  <input
+                    type="password"
+                    value={teacherPin}
+                    onChange={(e) => setTeacherPin(e.target.value)}
+                    placeholder="Sandi Khusus Pengajar"
+                    className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/60 text-[14px] font-[500] focus:outline-none"
+                    required
+                  />
+                </div>
+                <span className="text-[11px] text-[#FBFFF3]/80 px-1 font-medium">
+                  *Masukkan sandi otorisasi guru dari pihak sekolah
+                </span>
+              </div>
+            )}
 
             {/* Input Kata Sandi */}
             <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#FBFFF340] rounded-[16px] px-[16px] flex items-center gap-[14px]">
@@ -534,20 +588,43 @@ function LoginForm() {
               />
             </div>
 
-            {/* Tombol Daftar */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer mt-1"
-            >
-              {isLoading ? (
-                <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span className="text-[18px] font-[700] text-[#3D4127]">
-                  Daftarkan Akun
-                </span>
-              )}
-            </button>
+            {/* Tombol Aksi: Kembali ke Beranda (Icon) & Daftarkan Akun */}
+            <div className="w-full flex items-center gap-2.5 mt-1">
+              <Link
+                href="/"
+                title="Kembali ke Beranda"
+                aria-label="Kembali ke Beranda"
+                className="w-[54px] h-[54px] flex-shrink-0 bg-[#FBFFF330] hover:bg-[#FBFFF345] border border-[#FBFFF340] rounded-[16px] flex items-center justify-center text-[#FBFFF3] hover:text-white transition-all shadow-[0px_4px_4px_0px_#0000001A] active:scale-95 cursor-pointer"
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </Link>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="text-[18px] font-[700] text-[#3D4127]">
+                    Daftarkan Akun
+                  </span>
+                )}
+              </button>
+            </div>
           </form>
         )}
 
@@ -610,20 +687,43 @@ function LoginForm() {
                   />
                 </div>
 
-                {/* Tombol Kirim */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer mt-1"
-                >
-                  {isLoading ? (
-                    <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span className="text-[18px] font-[700] text-[#3D4127]">
-                      Kirim Link Reset
-                    </span>
-                  )}
-                </button>
+                {/* Tombol Aksi: Kembali ke Beranda (Icon) & Kirim */}
+                <div className="w-full flex items-center gap-2.5 mt-1">
+                  <Link
+                    href="/"
+                    title="Kembali ke Beranda"
+                    aria-label="Kembali ke Beranda"
+                    className="w-[54px] h-[54px] flex-shrink-0 bg-[#FBFFF330] hover:bg-[#FBFFF345] border border-[#FBFFF340] rounded-[16px] flex items-center justify-center text-[#FBFFF3] hover:text-white transition-all shadow-[0px_4px_4px_0px_#0000001A] active:scale-95 cursor-pointer"
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                  </Link>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span className="text-[18px] font-[700] text-[#3D4127]">
+                        Kirim Link Reset
+                      </span>
+                    )}
+                  </button>
+                </div>
 
                 <div className="w-full text-center mt-1">
                   <button
@@ -642,15 +742,7 @@ function LoginForm() {
           </div>
         )}
 
-        {/* Link Kembali ke Beranda */}
-        <div className="w-full text-center">
-          <Link
-            href="/"
-            className="text-[13px] text-[#FBFFF3]/80 hover:text-white transition-colors"
-          >
-            ← Kembali ke Beranda
-          </Link>
-        </div>
+
       </div>
     </main>
   );

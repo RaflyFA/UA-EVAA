@@ -90,3 +90,36 @@ create policy "Siswa bisa mengelola jawaban surti miliknya"
   to authenticated
   using (siswa_id = auth.uid())
   with check (siswa_id = auth.uid());
+
+-- ==============================================================================
+-- POLICY UNTUK TABEL KONTEN_MODUL
+-- ==============================================================================
+-- Aktifkan RLS pada konten_modul jika belum aktif
+alter table if exists public.konten_modul enable row level security;
+
+drop policy if exists "Semua user bisa membaca konten modul" on public.konten_modul;
+drop policy if exists "Guru bisa mengelola konten modul" on public.konten_modul;
+
+-- Semua user (siswa & guru) bisa membaca konten modul
+create policy "Semua user bisa membaca konten modul"
+  on public.konten_modul for select
+  to authenticated
+  using (true);
+
+-- Hanya guru yang bisa menambah, mengubah, dan menghapus konten modul
+create policy "Guru bisa mengelola konten modul"
+  on public.konten_modul for all
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  );
+
