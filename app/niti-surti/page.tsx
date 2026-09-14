@@ -19,6 +19,9 @@ export default function NitiSurtiPage() {
   const [solusi, setSolusi] = useState("");
   const [isValidated, setIsValidated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [instruksi, setInstruksi] = useState<string>(
+    "Amati fenomena dan permasalahan lingkungan di sekitar Anda. Rumuskan masalah utama yang ditemukan serta alternatif solusi nyata yang dapat diterapkan."
+  );
 
   // 1. Proteksi akses & ambil data jawaban yang tersimpan jika ada
   useEffect(() => {
@@ -27,6 +30,18 @@ export default function NitiSurtiPage() {
       if (!user) return;
 
       try {
+        // Ambil instruksi dari Guru jika sudah diatur
+        const { data: kontenData } = await supabase
+          .from("konten_modul")
+          .select("deskripsi")
+          .eq("tahap_niti", "surti")
+          .eq("tipe_konten", "instruksi")
+          .maybeSingle();
+
+        if (kontenData?.deskripsi) {
+          setInstruksi(kontenData.deskripsi);
+        }
+
         // Cek status tahap Niti Surti
         const { data: prog } = await supabase
           .from("progress_siswa")
@@ -167,6 +182,21 @@ export default function NitiSurtiPage() {
             </div>
           </div>
         </div>
+
+        {/* Bagian Instruksi Studi Kasus dari Guru */}
+        {instruksi && (
+          <div className="w-full max-w-[354px] bg-[#FBFFF3] rounded-[24px] p-5 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[18px]">📖</span>
+              <h2 className="text-[16px] font-[600] leading-[22px] text-[#3D4127]">
+                Instruksi & Studi Kasus
+              </h2>
+            </div>
+            <p className="text-[13px] font-[400] leading-[21px] text-[#3D4127]/90 whitespace-pre-line border-t border-[#3D4127]/15 pt-2.5">
+              {instruksi}
+            </p>
+          </div>
+        )}
 
         {/* Bagian Masalah Yang Ditemukan */}
         <div className="w-full max-w-[354px] min-h-[109px] bg-[#FBFFF3] rounded-[24px] p-4 sm:p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col justify-between gap-[12px]">

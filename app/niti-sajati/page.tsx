@@ -16,11 +16,30 @@ export default function NitiSajatiPage() {
   const { profile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [ucapan, setUcapan] = useState<string>(
+    "Selamat! Anda telah menuntaskan seluruh rangkaian proses pembelajaran Niti Panca Jena dengan penuh dedikasi. Teruslah menjadi pelopor penjaga kelestarian lingkungan dan terapkan nilai kearifan lokal dalam keseharian!"
+  );
 
   // Proteksi akses & tandai Niti Sajati selesai saat dikunjungi
   useEffect(() => {
     async function init() {
       if (!profile?.id) return;
+
+      try {
+        // Ambil ucapan selamat dari Guru jika ada
+        const { data: kontenData } = await supabase
+          .from("konten_modul")
+          .select("deskripsi")
+          .eq("tahap_niti", "sajati")
+          .eq("tipe_konten", "ucapan_selamat")
+          .maybeSingle();
+
+        if (kontenData?.deskripsi) {
+          setUcapan(kontenData.deskripsi);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil ucapan Niti Sajati:", err);
+      }
 
       const { data: prog } = await supabase
         .from("progress_siswa")
@@ -148,6 +167,21 @@ export default function NitiSajatiPage() {
             </div>
           </div>
         </div>
+
+        {/* Bagian Pesan Apresiasi & Refleksi dari Guru */}
+        {ucapan && (
+          <div className="w-full max-w-[354px] bg-[#FBFFF3] rounded-[24px] p-5 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[18px]">🏆</span>
+              <h2 className="text-[16px] font-[600] leading-[22px] text-[#3D4127]">
+                Pesan Apresiasi & Refleksi Guru
+              </h2>
+            </div>
+            <p className="text-[13px] font-[400] leading-[21px] text-[#3D4127]/90 italic border-t border-[#3D4127]/15 pt-2.5 whitespace-pre-line">
+              "{ucapan}"
+            </p>
+          </div>
+        )}
 
         {/* Section Pencapaian Kompetensi */}
         <div className="w-full max-w-[354px] bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-5">

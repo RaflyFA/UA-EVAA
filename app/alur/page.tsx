@@ -26,7 +26,7 @@ const babs: BabItem[] = [
 ];
 
 export default function AlurModulPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lockedModalData, setLockedModalData] = useState<{
     isOpen: boolean;
@@ -44,7 +44,7 @@ export default function AlurModulPage() {
 
   useEffect(() => {
     async function loadProgress() {
-      if (!user) {
+      if (!user || profile?.role !== "siswa") {
         setIsLoadingProgress(false);
         return;
       }
@@ -93,7 +93,7 @@ export default function AlurModulPage() {
     if (!authLoading) {
       loadProgress();
     }
-  }, [user, authLoading]);
+  }, [user, profile, authLoading]);
 
   // Tentukan tahap yang sedang aktif (yang belum 'disetujui') untuk tombol bawah
   const currentUnfinishedBab = babs.find((b) => {

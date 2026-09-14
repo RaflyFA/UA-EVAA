@@ -21,12 +21,36 @@ export default function NitiBuktiPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedPath, setUploadedPath] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<{
+    nilai: number | null;
+    catatan: string | null;
+    status: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [panduan, setPanduan] = useState<string>(
+    "Susun dokumen rencana aksi proyek lingkungan secara berkelompok. Unggah laporan dokumen dalam format PDF (maksimal 10 MB) sebagai bukti pemahaman sebelum melanjutkan ke tahap aksi nyata."
+  );
 
   // Proteksi akses & cek apakah sudah pernah submit sebelumnya
   useEffect(() => {
     async function init() {
       if (!profile?.id) return;
+
+      try {
+        // Ambil panduan tugas dari Guru jika ada
+        const { data: kontenData } = await supabase
+          .from("konten_modul")
+          .select("deskripsi")
+          .eq("tahap_niti", "bukti")
+          .eq("tipe_konten", "panduan_tugas")
+          .maybeSingle();
+
+        if (kontenData?.deskripsi) {
+          setPanduan(kontenData.deskripsi);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil panduan Niti Bukti:", err);
+      }
 
       // Cek status tahap Niti Bukti
       const { data: prog } = await supabase
@@ -53,6 +77,24 @@ export default function NitiBuktiPage() {
 
       if (sub) {
         setUploadStatus("success");
+        if (sub.nama_file) {
+          setUploadedFile({ name: sub.nama_file } as File);
+        }
+
+        // Ambil nilai dari tabel nilai jika sudah dinilai guru
+        const { data: nData } = await supabase
+          .from("nilai")
+          .select("nilai_angka, catatan")
+          .eq("submission_id", sub.id)
+          .maybeSingle();
+
+        if (nData || sub.catatan_revisi) {
+          setEvaluation({
+            nilai: nData?.nilai_angka !== undefined && nData?.nilai_angka !== null ? Number(nData.nilai_angka) : null,
+            catatan: nData?.catatan || sub.catatan_revisi || "Tugas telah disetujui guru.",
+            status: sub.status,
+          });
+        }
       }
     }
 
@@ -256,6 +298,21 @@ export default function NitiBuktiPage() {
           </div>
         </div>
 
+        {/* Bagian Panduan Rencana Aksi dari Guru */}
+        {panduan && (
+          <div className="w-full max-w-[354px] bg-[#FBFFF3] rounded-[24px] p-5 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[18px]">📑</span>
+              <h2 className="text-[16px] font-[600] leading-[22px] text-[#3D4127]">
+                Panduan & Kriteria Penilaian
+              </h2>
+            </div>
+            <p className="text-[13px] font-[400] leading-[21px] text-[#3D4127]/90 whitespace-pre-line border-t border-[#3D4127]/15 pt-2.5">
+              {panduan}
+            </p>
+          </div>
+        )}
+
         {/* Bagian Unggah Rencana Aksi */}
         <div className="w-full max-w-[354px] min-h-[160px] bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-4">
           {/* Judul & Deskripsi */}
@@ -367,6 +424,32 @@ export default function NitiBuktiPage() {
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Kartu Hasil Penilaian & Umpan Balik Guru */}
+          {evaluation && (
+            <div className="w-full max-w-[306px] bg-[#FBFFF3] rounded-[18px] border border-[#636B2F]/30 p-4 flex flex-col gap-2 mx-auto shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-bold text-[#636B2F] uppercase tracking-wider">
+                  Hasil Evaluasi Guru
+                </span>
+                {evaluation.nilai !== null ? (
+                  <span className="text-[13px] font-black text-[#636B2F] bg-[#636B2F]/15 px-2.5 py-0.5 rounded-full">
+                    {evaluation.nilai} / 100
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-[#15803d] bg-[#16a34a]/15 px-2 py-0.5 rounded-full">
+                    Disetujui
+                  </span>
+                )}
+              </div>
+              {evaluation.catatan && (
+                <p className="text-[12px] text-[#3D4127] bg-[#EDF0E8]/60 p-2.5 rounded-xl leading-relaxed">
+                  <strong className="text-[#636B2F]">Catatan: </strong>
+                  {evaluation.catatan}
+                </p>
               )}
             </div>
           )}

@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, currentUser?: User | null) => {
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -49,15 +49,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Fallback jika profile belum terbentuk di tabel
         console.warn("Profile not found for user:", userId, error);
+        const targetUser = currentUser || user;
+        if (targetUser?.user_metadata?.role) {
+          setProfile({
+            id: userId,
+            nama_lengkap:
+              targetUser.user_metadata.nama_lengkap ||
+              targetUser.email?.split("@")[0] ||
+              "Pengguna",
+            role: targetUser.user_metadata.role,
+            kelas: targetUser.user_metadata.kelas || null,
+            nomor_induk: targetUser.user_metadata.nomor_induk || null,
+            avatar_url: targetUser.user_metadata.avatar_url || null,
+          });
+        }
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
+      const targetUser = currentUser || user;
+      if (targetUser?.user_metadata?.role) {
+        setProfile({
+          id: userId,
+          nama_lengkap:
+            targetUser.user_metadata.nama_lengkap ||
+            targetUser.email?.split("@")[0] ||
+            "Pengguna",
+          role: targetUser.user_metadata.role,
+          kelas: targetUser.user_metadata.kelas || null,
+          nomor_induk: targetUser.user_metadata.nomor_induk || null,
+          avatar_url: targetUser.user_metadata.avatar_url || null,
+        });
+      }
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id);
+      await fetchProfile(user.id, user);
     }
   };
 
@@ -68,7 +96,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
-          await fetchProfile(session.user.id);
+          // Pre-populate instan dari user_metadata jika ada
+          if (session.user.user_metadata?.role) {
+            setProfile({
+              id: session.user.id,
+              nama_lengkap:
+                session.user.user_metadata.nama_lengkap ||
+                session.user.email?.split("@")[0] ||
+                "Pengguna",
+              role: session.user.user_metadata.role,
+              kelas: session.user.user_metadata.kelas || null,
+              nomor_induk: session.user.user_metadata.nomor_induk || null,
+              avatar_url: session.user.user_metadata.avatar_url || null,
+            });
+          }
+          await fetchProfile(session.user.id, session.user);
         }
       } catch (err) {
         console.error("Error getting session:", err);
@@ -84,7 +126,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           setUser(session.user);
-          await fetchProfile(session.user.id);
+          if (session.user.user_metadata?.role) {
+            setProfile({
+              id: session.user.id,
+              nama_lengkap:
+                session.user.user_metadata.nama_lengkap ||
+                session.user.email?.split("@")[0] ||
+                "Pengguna",
+              role: session.user.user_metadata.role,
+              kelas: session.user.user_metadata.kelas || null,
+              nomor_induk: session.user.user_metadata.nomor_induk || null,
+              avatar_url: session.user.user_metadata.avatar_url || null,
+            });
+          }
+          await fetchProfile(session.user.id, session.user);
         } else {
           setUser(null);
           setProfile(null);

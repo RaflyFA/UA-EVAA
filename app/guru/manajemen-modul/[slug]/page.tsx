@@ -12,7 +12,7 @@ interface StageMeta {
   subtitle: string;
   bgFileName: string;
   bgImage: string;
-  tahap: string;
+  tahap: "harti" | "surti" | "bukti" | "bakti" | "sajati";
 }
 
 const STAGE_CONFIG: Record<string, StageMeta> = {
@@ -85,15 +85,15 @@ export default function GuruEditModulPage() {
     subtitle: "Pahami konsep dan alur pembelajarannya.",
     bgFileName: "latarbelakang-1.jpg",
     bgImage: "/gambar 4.png",
-    tahap: "harti",
+    tahap: "harti" as const,
   };
 
-  // State form
-  const [bgFileName, setBgFileName] = useState(config.bgFileName);
-  const [judulModul, setJudulModul] = useState(config.title);
-  const [deskripsiModul, setDeskripsiModul] = useState(config.subtitle);
+  // State form umum
+  const [bgFileName] = useState(config.bgFileName);
+  const [judulModul] = useState(config.title);
+  const [deskripsiModul] = useState(config.subtitle);
 
-  // State Kartu Deskripsi (Bahan Bacaan)
+  // State khusus Niti Harti
   const [deskripsiCards, setDeskripsiCards] = useState<DeskripsiCard[]>([
     {
       id: "desc-1",
@@ -115,7 +115,6 @@ export default function GuruEditModulPage() {
     },
   ]);
 
-  // State Kartu YouTube
   const [youtubeCards, setYoutubeCards] = useState<YoutubeCard[]>([
     {
       id: "yt-1",
@@ -131,6 +130,26 @@ export default function GuruEditModulPage() {
     },
   ]);
 
+  // State khusus Niti Surti (Instruksi / Studi Kasus)
+  const [instruksiSurti, setInstruksiSurti] = useState(
+    "Amati fenomena dan permasalahan lingkungan di sekitar sekolah atau tempat tinggal Anda. Rumuskan masalah utama yang ditemukan serta alternatif solusi nyata yang dapat diterapkan secara berkelanjutan."
+  );
+
+  // State khusus Niti Bukti (Panduan & Syarat Tugas)
+  const [panduanBukti, setPanduanBukti] = useState(
+    "Susun dokumen rencana aksi proyek lingkungan secara berkelompok. Unggah laporan dokumen dalam format PDF (maksimal 10 MB) sebagai bukti pemahaman sebelum melanjutkan ke tahap aksi nyata."
+  );
+
+  // State khusus Niti Bakti (Panduan Aksi Lingkungan)
+  const [panduanBakti, setPanduanBakti] = useState(
+    "Pilihlah salah satu dari 3 kategori aksi lingkungan (Daur Ulang Sampah, Menanam Pohon, atau Gerakan Hemat Energi). Laksanakan aksi tersebut bersama kelompok, dokumentasikan, lalu unggah laporan PDF bukti aksi Anda."
+  );
+
+  // State khusus Niti Sajati (Pesan Apresiasi & Refleksi)
+  const [ucapanSajati, setUcapanSajati] = useState(
+    "Selamat! Anda telah menuntaskan seluruh rangkaian proses pembelajaran Niti Panca Jena dengan penuh dedikasi. Teruslah menjadi pelopor penjaga kelestarian lingkungan dan terapkan nilai kearifan lokal dalam keseharian!"
+  );
+
   // Status loading, saving, notification, dan accordion preview
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -140,7 +159,7 @@ export default function GuruEditModulPage() {
   } | null>(null);
   const [previewExpanded, setPreviewExpanded] = useState<Record<string, boolean>>({});
 
-  // 1. Fetch konten dari Supabase saat slug berubah
+  // 1. Fetch konten dari Supabase saat slug/tahap berubah
   useEffect(() => {
     async function loadContent() {
       setIsLoading(true);
@@ -152,28 +171,38 @@ export default function GuruEditModulPage() {
           .order("urutan", { ascending: true });
 
         if (!error && data && data.length > 0) {
-          const loadedBacaan = data
-            .filter((item) => item.tipe_konten === "bacaan")
-            .map((item) => ({
-              id: item.id,
-              judul: item.judul || "Bahan Bacaan",
-              deskripsi: item.deskripsi || "",
-            }));
+          if (config.tahap === "harti") {
+            const loadedBacaan = data
+              .filter((item) => item.tipe_konten === "bacaan")
+              .map((item) => ({
+                id: item.id,
+                judul: item.judul || "Bahan Bacaan",
+                deskripsi: item.deskripsi || "",
+              }));
 
-          const loadedVideos = data
-            .filter((item) => item.tipe_konten === "video")
-            .map((item, idx) => ({
-              id: item.id,
-              judul: item.judul || "Video Pembelajaran",
-              url: item.url_youtube || "",
-              image: idx % 2 === 0 ? "/lampiran-2.png" : "/lampiran-3.png",
-            }));
+            const loadedVideos = data
+              .filter((item) => item.tipe_konten === "video")
+              .map((item, idx) => ({
+                id: item.id,
+                judul: item.judul || "Video Pembelajaran",
+                url: item.url_youtube || "",
+                image: idx % 2 === 0 ? "/lampiran-2.png" : "/lampiran-3.png",
+              }));
 
-          if (loadedBacaan.length > 0) {
-            setDeskripsiCards(loadedBacaan);
-          }
-          if (loadedVideos.length > 0) {
-            setYoutubeCards(loadedVideos);
+            if (loadedBacaan.length > 0) setDeskripsiCards(loadedBacaan);
+            if (loadedVideos.length > 0) setYoutubeCards(loadedVideos);
+          } else if (config.tahap === "surti") {
+            const item = data.find((d) => d.tipe_konten === "instruksi");
+            if (item?.deskripsi) setInstruksiSurti(item.deskripsi);
+          } else if (config.tahap === "bukti") {
+            const item = data.find((d) => d.tipe_konten === "panduan_tugas");
+            if (item?.deskripsi) setPanduanBukti(item.deskripsi);
+          } else if (config.tahap === "bakti") {
+            const item = data.find((d) => d.tipe_konten === "panduan_tugas");
+            if (item?.deskripsi) setPanduanBakti(item.deskripsi);
+          } else if (config.tahap === "sajati") {
+            const item = data.find((d) => d.tipe_konten === "ucapan_selamat");
+            if (item?.deskripsi) setUcapanSajati(item.deskripsi);
           }
         }
       } catch (err) {
@@ -186,7 +215,7 @@ export default function GuruEditModulPage() {
     loadContent();
   }, [config.tahap]);
 
-  // 2. Handler Tambah Kartu Deskripsi
+  // Handler Niti Harti (Bacaan)
   const handleAddDeskripsi = () => {
     const nextNumber = deskripsiCards.length + 1;
     const newCard: DeskripsiCard = {
@@ -197,7 +226,6 @@ export default function GuruEditModulPage() {
     setDeskripsiCards([...deskripsiCards, newCard]);
   };
 
-  // 3. Handler Duplicate Kartu Deskripsi
   const handleDuplicateDeskripsi = (index: number) => {
     const target = deskripsiCards[index];
     const duplicated: DeskripsiCard = {
@@ -210,7 +238,6 @@ export default function GuruEditModulPage() {
     setDeskripsiCards(updated);
   };
 
-  // 4. Handler Hapus Kartu Deskripsi
   const handleDeleteDeskripsi = (index: number) => {
     if (deskripsiCards.length <= 1) {
       alert("Minimal harus ada 1 Kartu Deskripsi.");
@@ -220,7 +247,7 @@ export default function GuruEditModulPage() {
     setDeskripsiCards(updated);
   };
 
-  // 5. Handler Tambah Kartu YouTube
+  // Handler Niti Harti (Video)
   const handleAddYoutube = () => {
     const newCard: YoutubeCard = {
       id: `yt-${Date.now()}`,
@@ -231,7 +258,6 @@ export default function GuruEditModulPage() {
     setYoutubeCards([...youtubeCards, newCard]);
   };
 
-  // 6. Handler Duplicate Kartu YouTube
   const handleDuplicateYoutube = (index: number) => {
     const target = youtubeCards[index];
     const duplicated: YoutubeCard = {
@@ -245,62 +271,106 @@ export default function GuruEditModulPage() {
     setYoutubeCards(updated);
   };
 
-  // 7. Handler Hapus Kartu YouTube
   const handleDeleteYoutube = (index: number) => {
     const updated = youtubeCards.filter((_, i) => i !== index);
     setYoutubeCards(updated);
   };
 
-  // 8. Handler Simpan Perubahan ke Supabase
+  // Handler Simpan Perubahan ke Supabase
   const handleSaveChanges = async () => {
     setIsSaving(true);
     setNotification(null);
 
     try {
-      // Ambil profile guru aktif (jika ada)
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      // Hapus data lama untuk bab/tahap ini agar sinkron
+      // Hapus data lama untuk tahap ini agar sinkron
       await supabase
         .from("konten_modul")
         .delete()
         .eq("tahap_niti", config.tahap);
 
-      // Siapkan baris baru kartu bacaan
-      const rowsBacaan = deskripsiCards.map((card, idx) => ({
-        tahap_niti: config.tahap,
-        tipe_konten: "bacaan",
-        judul: card.judul,
-        deskripsi: card.deskripsi,
-        urutan: idx + 1,
-        dibuat_oleh: user?.id || null,
-      }));
+      let rowsToInsert: any[] = [];
 
-      // Siapkan baris baru kartu video
-      const rowsVideo = youtubeCards.map((card, idx) => ({
-        tahap_niti: config.tahap,
-        tipe_konten: "video",
-        judul: card.judul,
-        url_youtube: card.url,
-        urutan: deskripsiCards.length + idx + 1,
-        dibuat_oleh: user?.id || null,
-      }));
+      if (config.tahap === "harti") {
+        const rowsBacaan = deskripsiCards.map((card, idx) => ({
+          tahap_niti: "harti",
+          tipe_konten: "bacaan",
+          judul: card.judul,
+          deskripsi: card.deskripsi,
+          urutan: idx + 1,
+          dibuat_oleh: user?.id || null,
+        }));
 
-      const allRows = [...rowsBacaan, ...rowsVideo];
+        const rowsVideo = youtubeCards.map((card, idx) => ({
+          tahap_niti: "harti",
+          tipe_konten: "video",
+          judul: card.judul,
+          url_youtube: card.url,
+          urutan: deskripsiCards.length + idx + 1,
+          dibuat_oleh: user?.id || null,
+        }));
 
-      if (allRows.length > 0) {
+        rowsToInsert = [...rowsBacaan, ...rowsVideo];
+      } else if (config.tahap === "surti") {
+        rowsToInsert = [
+          {
+            tahap_niti: "surti",
+            tipe_konten: "instruksi",
+            judul: "Instruksi Studi Kasus",
+            deskripsi: instruksiSurti,
+            urutan: 1,
+            dibuat_oleh: user?.id || null,
+          },
+        ];
+      } else if (config.tahap === "bukti") {
+        rowsToInsert = [
+          {
+            tahap_niti: "bukti",
+            tipe_konten: "panduan_tugas",
+            judul: "Panduan Tugas Rencana Aksi",
+            deskripsi: panduanBukti,
+            urutan: 1,
+            dibuat_oleh: user?.id || null,
+          },
+        ];
+      } else if (config.tahap === "bakti") {
+        rowsToInsert = [
+          {
+            tahap_niti: "bakti",
+            tipe_konten: "panduan_tugas",
+            judul: "Panduan Aksi Nyata Lingkungan",
+            deskripsi: panduanBakti,
+            urutan: 1,
+            dibuat_oleh: user?.id || null,
+          },
+        ];
+      } else if (config.tahap === "sajati") {
+        rowsToInsert = [
+          {
+            tahap_niti: "sajati",
+            tipe_konten: "ucapan_selamat",
+            judul: "Pesan Refleksi & Apresiasi",
+            deskripsi: ucapanSajati,
+            urutan: 1,
+            dibuat_oleh: user?.id || null,
+          },
+        ];
+      }
+
+      if (rowsToInsert.length > 0) {
         const { error: insertError } = await supabase
           .from("konten_modul")
-          .insert(allRows);
+          .insert(rowsToInsert);
 
         if (insertError) throw insertError;
       }
 
       setNotification({
         type: "success",
-        message: "Perubahan modul berhasil disimpan ke database!",
+        message: `Konten untuk ${config.title} berhasil disimpan ke database!`,
       });
       setTimeout(() => setNotification(null), 4000);
     } catch (err: any) {
@@ -316,7 +386,6 @@ export default function GuruEditModulPage() {
     }
   };
 
-  // Helper untuk toggle accordion preview
   const togglePreviewAccordion = (id: string) => {
     setPreviewExpanded((prev) => ({
       ...prev,
@@ -338,7 +407,7 @@ export default function GuruEditModulPage() {
           <span>{notification.message}</span>
           <button
             onClick={() => setNotification(null)}
-            className="text-[12px] underline ml-4 hover:opacity-75"
+            className="text-[12px] underline ml-4 hover:opacity-75 cursor-pointer"
           >
             Tutup
           </button>
@@ -393,7 +462,7 @@ export default function GuruEditModulPage() {
       <div className="w-full max-w-[1158px] flex gap-[12px] items-start">
         {/* ================= EDITOR KIRI (828px) ================= */}
         <div className="w-[828px] flex-shrink-0 flex flex-col gap-[16px]">
-          {/* 1. KARTU DASAR */}
+          {/* 1. KARTU DASAR (Sama untuk semua bab) */}
           <div className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[12px] shadow-[0px_2px_2px_0px_#00000040]">
             <div className="flex items-center justify-between">
               <h2 className="text-[16px] font-bold text-[#3D4127]">
@@ -452,33 +521,16 @@ export default function GuruEditModulPage() {
                   Judul Alur Modul
                 </label>
                 <span className="text-[11px] text-[#3D4127]/50 italic">
-                  Tidak dapat diubah
+                  Baku dari kurikulum
                 </span>
               </div>
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  value={judulModul}
-                  readOnly
-                  tabIndex={-1}
-                  className="w-full bg-[#EDF0E8]/60 text-[#3D4127]/70 font-semibold text-[14px] rounded-[12px] p-3 pr-10 border border-[#D3D8C3]/50 cursor-not-allowed select-none focus:outline-none"
-                />
-                <div className="absolute right-3 text-[#3D4127]/40 pointer-events-none">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </div>
-              </div>
+              <input
+                type="text"
+                value={judulModul}
+                readOnly
+                tabIndex={-1}
+                className="w-full bg-[#EDF0E8]/60 text-[#3D4127]/70 font-semibold text-[14px] rounded-[12px] p-3 border border-[#D3D8C3]/50 cursor-not-allowed select-none focus:outline-none"
+              />
             </div>
 
             {/* Field Subtitle / Deskripsi Alur Modul (Terkunci) */}
@@ -488,284 +540,403 @@ export default function GuruEditModulPage() {
                   Deskripsi Singkat Modul
                 </label>
                 <span className="text-[11px] text-[#3D4127]/50 italic">
-                  Tidak dapat diubah
+                  Baku dari kurikulum
                 </span>
               </div>
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  value={deskripsiModul}
-                  readOnly
-                  tabIndex={-1}
-                  className="w-full bg-[#EDF0E8]/60 text-[#3D4127]/70 font-semibold text-[14px] rounded-[12px] p-3 pr-10 border border-[#D3D8C3]/50 cursor-not-allowed select-none focus:outline-none"
-                />
-                <div className="absolute right-3 text-[#3D4127]/40 pointer-events-none">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </div>
-              </div>
+              <input
+                type="text"
+                value={deskripsiModul}
+                readOnly
+                tabIndex={-1}
+                className="w-full bg-[#EDF0E8]/60 text-[#3D4127]/70 font-semibold text-[14px] rounded-[12px] p-3 border border-[#D3D8C3]/50 cursor-not-allowed select-none focus:outline-none"
+              />
             </div>
-            
-            <p className="text-[11.5px] text-[#3D4127]/60 bg-[#EDF0E8]/40 p-2.5 rounded-[8px] border border-[#D3D8C3]/30">
-              💡 <strong>Catatan:</strong> Nama dan deskripsi alur bab ditetapkan secara baku sesuai kurikulum. Anda dapat mengelola materi <strong>Kartu Deskripsi (Bahan Bacaan)</strong> dan <strong>Kartu YouTube</strong> di bawah ini.
-            </p>
           </div>
 
-          {/* 2. KARTU DESKRIPSI (LIST BAHAN BACAAN) */}
-          <div className="flex flex-col gap-[12px]">
-            {deskripsiCards.map((card, idx) => (
-              <div
-                key={card.id}
-                className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[12px] shadow-[0px_2px_2px_0px_#00000040]"
-              >
-                {/* Header Kartu */}
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src="/guru/garis 3.svg"
-                      alt="Drag"
-                      width={18}
-                      height={18}
-                      className="object-contain cursor-grab opacity-70"
-                    />
-                    <h3 className="text-[16px] font-bold text-[#3D4127]">
-                      Kartu Deskripsi #{idx + 1}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleDuplicateDeskripsi(idx)}
-                      title="Duplikat Kartu"
-                      className="p-1.5 hover:bg-black/5 rounded transition-colors cursor-pointer"
-                    >
-                      <Image
-                        src="/guru/icon salin.svg"
-                        alt="Duplicate"
-                        width={18}
-                        height={18}
-                        className="object-contain opacity-70"
-                      />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDeskripsi(idx)}
-                      title="Hapus Kartu"
-                      className="p-1.5 hover:bg-red-50 rounded transition-colors cursor-pointer text-red-600"
-                    >
-                      <Image
-                        src="/guru/icon delet.svg"
-                        alt="Delete"
-                        width={18}
-                        height={18}
-                        className="object-contain opacity-70 hover:opacity-100"
-                      />
-                    </button>
-                  </div>
-                </div>
+          {/* ================= 2. KONTEN SPESIFIK BERDASARKAN TAHAP ================= */}
 
-                {/* Field Judul */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[12px] font-medium text-[#3D4127]/60">
-                    Judul
-                  </label>
-                  <input
-                    type="text"
-                    value={card.judul}
-                    onChange={(e) => {
-                      const newCards = [...deskripsiCards];
-                      newCards[idx].judul = e.target.value;
-                      setDeskripsiCards(newCards);
-                    }}
-                    className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 focus:outline-none"
-                  />
-                </div>
+          {/* A. KHUSUS TAHAP 1: NITI HARTI (Bahan Bacaan & Video) */}
+          {config.tahap === "harti" && (
+            <>
+              {/* List Kartu Deskripsi Bacaan */}
+              <div className="flex flex-col gap-[12px]">
+                {deskripsiCards.map((card, idx) => (
+                  <div
+                    key={card.id}
+                    className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[12px] shadow-[0px_2px_2px_0px_#00000040]"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/guru/garis 3.svg"
+                          alt="Drag"
+                          width={18}
+                          height={18}
+                          className="object-contain cursor-grab opacity-70"
+                        />
+                        <h3 className="text-[16px] font-bold text-[#3D4127]">
+                          Kartu Deskripsi #{idx + 1}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDuplicateDeskripsi(idx)}
+                          title="Duplikat Kartu"
+                          className="p-1.5 hover:bg-black/5 rounded transition-colors cursor-pointer"
+                        >
+                          <Image
+                            src="/guru/icon salin.svg"
+                            alt="Duplicate"
+                            width={18}
+                            height={18}
+                            className="object-contain opacity-70"
+                          />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDeskripsi(idx)}
+                          title="Hapus Kartu"
+                          className="p-1.5 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        >
+                          <Image
+                            src="/guru/icon delet.svg"
+                            alt="Delete"
+                            width={18}
+                            height={18}
+                            className="object-contain opacity-70 hover:opacity-100"
+                          />
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Field Deskripsi */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[12px] font-medium text-[#3D4127]/60">
-                    Deskripsi
-                  </label>
-                  <textarea
-                    value={card.deskripsi}
-                    onChange={(e) => {
-                      const newCards = [...deskripsiCards];
-                      newCards[idx].deskripsi = e.target.value;
-                      setDeskripsiCards(newCards);
-                    }}
-                    rows={3}
-                    className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] text-[14px] border border-[#D3D8C3]/40 focus:outline-none resize-none leading-relaxed"
-                  />
-                </div>
-              </div>
-            ))}
-
-            {/* Tombol Tambah Kartu Deskripsi Baru */}
-            <button
-              onClick={handleAddDeskripsi}
-              className="w-full py-3 bg-[#EDF0E8]/70 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[16px] flex items-center justify-center gap-2 text-[#636B2F] font-bold text-[14px] transition-all cursor-pointer shadow-sm"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="6" y1="12" x2="18" y2="12" />
-              </svg>
-              <span>Tambah Kartu Deskripsi Baru</span>
-            </button>
-          </div>
-
-          {/* 3. KARTU YOUTUBE */}
-          <div className="flex flex-col gap-[12px]">
-            {youtubeCards.map((card, idx) => (
-              <div
-                key={card.id}
-                className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[12px] shadow-[0px_2px_2px_0px_#00000040]"
-              >
-                {/* Header Kartu */}
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src="/guru/garis 3.svg"
-                      alt="Drag"
-                      width={18}
-                      height={18}
-                      className="object-contain cursor-grab opacity-70"
-                    />
-                    <h3 className="text-[16px] font-bold text-[#3D4127]">
-                      Kartu YouTube #{idx + 1}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleDuplicateYoutube(idx)}
-                      title="Duplikat Video"
-                      className="p-1.5 hover:bg-black/5 rounded transition-colors cursor-pointer"
-                    >
-                      <Image
-                        src="/guru/icon salin.svg"
-                        alt="Duplicate"
-                        width={18}
-                        height={18}
-                        className="object-contain opacity-70"
-                      />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteYoutube(idx)}
-                      title="Hapus Video"
-                      className="p-1.5 hover:bg-red-50 rounded transition-colors cursor-pointer text-red-600"
-                    >
-                      <Image
-                        src="/guru/icon delet.svg"
-                        alt="Delete"
-                        width={18}
-                        height={18}
-                        className="object-contain opacity-70 hover:opacity-100"
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Body: Inputs (Kiri) & Thumbnail Pratinjau (Kanan) */}
-                <div className="flex gap-4 w-full items-start">
-                  <div className="flex-1 flex flex-col gap-[12px]">
-                    {/* Field Judul */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[12px] font-medium text-[#3D4127]/60">
-                        Judul Video
+                        Judul
                       </label>
                       <input
                         type="text"
                         value={card.judul}
                         onChange={(e) => {
-                          const newCards = [...youtubeCards];
+                          const newCards = [...deskripsiCards];
                           newCards[idx].judul = e.target.value;
-                          setYoutubeCards(newCards);
+                          setDeskripsiCards(newCards);
                         }}
                         className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 focus:outline-none"
                       />
                     </div>
 
-                    {/* Field Tautan YouTube */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[12px] font-medium text-[#3D4127]/60">
-                        Tautan YouTube
+                        Deskripsi
                       </label>
-                      <input
-                        type="text"
-                        value={card.url}
-                        placeholder="https://www.youtube.com/watch?v=..."
+                      <textarea
+                        value={card.deskripsi}
                         onChange={(e) => {
-                          const newCards = [...youtubeCards];
-                          newCards[idx].url = e.target.value;
-                          setYoutubeCards(newCards);
+                          const newCards = [...deskripsiCards];
+                          newCards[idx].deskripsi = e.target.value;
+                          setDeskripsiCards(newCards);
                         }}
-                        className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 focus:outline-none"
+                        rows={3}
+                        className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] text-[14px] border border-[#D3D8C3]/40 focus:outline-none resize-none leading-relaxed"
                       />
                     </div>
                   </div>
+                ))}
 
-                  {/* Pratinjau Thumbnail Video di Kanan */}
-                  <div className="w-[200px] flex flex-col gap-1 flex-shrink-0">
-                    <label className="text-[12px] font-medium text-[#3D4127]/60">
-                      Pratinjau Video
-                    </label>
-                    <div className="w-full h-[110px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5 flex items-center justify-center">
-                      <Image
-                        src={card.image || "/lampiran-2.png"}
-                        alt={card.judul}
-                        fill
-                        className="object-cover"
-                      />
-                      {/* YouTube Red Play Icon Overlay */}
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
-                          <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
+                <button
+                  onClick={handleAddDeskripsi}
+                  className="w-full py-3 bg-[#EDF0E8]/70 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[16px] flex items-center justify-center gap-2 text-[#636B2F] font-bold text-[14px] transition-all cursor-pointer shadow-sm"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="6" y1="12" x2="18" y2="12" />
+                  </svg>
+                  <span>Tambah Kartu Deskripsi Baru</span>
+                </button>
+              </div>
+
+              {/* List Kartu YouTube Video */}
+              <div className="flex flex-col gap-[12px]">
+                {youtubeCards.map((card, idx) => (
+                  <div
+                    key={card.id}
+                    className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[12px] shadow-[0px_2px_2px_0px_#00000040]"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/guru/garis 3.svg"
+                          alt="Drag"
+                          width={18}
+                          height={18}
+                          className="object-contain cursor-grab opacity-70"
+                        />
+                        <h3 className="text-[16px] font-bold text-[#3D4127]">
+                          Kartu YouTube #{idx + 1}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDuplicateYoutube(idx)}
+                          title="Duplikat Video"
+                          className="p-1.5 hover:bg-black/5 rounded transition-colors cursor-pointer"
+                        >
+                          <Image
+                            src="/guru/icon salin.svg"
+                            alt="Duplicate"
+                            width={18}
+                            height={18}
+                            className="object-contain opacity-70"
+                          />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteYoutube(idx)}
+                          title="Hapus Video"
+                          className="p-1.5 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        >
+                          <Image
+                            src="/guru/icon delet.svg"
+                            alt="Delete"
+                            width={18}
+                            height={18}
+                            className="object-contain opacity-70 hover:opacity-100"
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 w-full items-start">
+                      <div className="flex-1 flex flex-col gap-[12px]">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-medium text-[#3D4127]/60">
+                            Judul Video
+                          </label>
+                          <input
+                            type="text"
+                            value={card.judul}
+                            onChange={(e) => {
+                              const newCards = [...youtubeCards];
+                              newCards[idx].judul = e.target.value;
+                              setYoutubeCards(newCards);
+                            }}
+                            className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-medium text-[#3D4127]/60">
+                            Tautan YouTube
+                          </label>
+                          <input
+                            type="text"
+                            value={card.url}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            onChange={(e) => {
+                              const newCards = [...youtubeCards];
+                              newCards[idx].url = e.target.value;
+                              setYoutubeCards(newCards);
+                            }}
+                            className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="w-[200px] flex flex-col gap-1 flex-shrink-0">
+                        <label className="text-[12px] font-medium text-[#3D4127]/60">
+                          Pratinjau Video
+                        </label>
+                        <div className="w-full h-[110px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5 flex items-center justify-center">
+                          <Image
+                            src={card.image || "/lampiran-2.png"}
+                            alt={card.judul}
+                            fill
+                            className="object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
+                              <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                ))}
+
+                <button
+                  onClick={handleAddYoutube}
+                  className="w-full py-3 bg-[#EDF0E8]/70 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[16px] flex items-center justify-center gap-2 text-[#636B2F] font-bold text-[14px] transition-all cursor-pointer shadow-sm"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="6" y1="12" x2="18" y2="12" />
+                  </svg>
+                  <span>Tambah Kartu YouTube Baru</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* B. KHUSUS TAHAP 2: NITI SURTI (Teks Instruksi / Studi Kasus) */}
+          {config.tahap === "surti" && (
+            <div className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[16px] shadow-[0px_2px_2px_0px_#00000040]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#3D4127]">
+                    Teks Instruksi & Studi Kasus Siswa
+                  </h3>
+                  <p className="text-[13px] text-[#3D4127]/70 mt-1">
+                    Teks ini akan dibaca oleh siswa di halaman Niti Surti sebagai pengantar sebelum mereka mengidentifikasi masalah dan merumuskan alternatif solusi.
+                  </p>
                 </div>
               </div>
-            ))}
 
-            {/* Tombol Tambah Kartu YouTube Baru */}
-            <button
-              onClick={handleAddYoutube}
-              className="w-full py-3 bg-[#EDF0E8]/70 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[16px] flex items-center justify-center gap-2 text-[#636B2F] font-bold text-[14px] transition-all cursor-pointer shadow-sm"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="6" y1="12" x2="18" y2="12" />
-              </svg>
-              <span>Tambah Kartu YouTube Baru</span>
-            </button>
-          </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-semibold text-[#3D4127]">
+                  Uraian Studi Kasus & Petunjuk Tugas
+                </label>
+                <textarea
+                  value={instruksiSurti}
+                  onChange={(e) => setInstruksiSurti(e.target.value)}
+                  rows={8}
+                  placeholder="Ketik studi kasus, fenomena lingkungan, atau instruksi langkah kerja untuk siswa..."
+                  className="w-full bg-[#EDF0E8] rounded-[12px] p-4 text-[#3D4127] text-[14px] leading-relaxed border border-[#D3D8C3]/50 focus:outline-none focus:border-[#636B2F] transition-colors"
+                />
+              </div>
+
+              <div className="p-3 bg-[#EDF0E8]/50 rounded-[10px] border border-[#D3D8C3]/40 text-[12px] text-[#3D4127]/80 flex items-center gap-2">
+                <span>💡</span>
+                <span>
+                  Setelah membaca instruksi ini, siswa akan mengisi form <strong>Masalah Yang Ditemukan</strong>, <strong>Alternatif Solusi</strong>, dan melakukan <strong>Validasi Kebenaran Informasi</strong>.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* C. KHUSUS TAHAP 3: NITI BUKTI (Panduan Rencana Aksi) */}
+          {config.tahap === "bukti" && (
+            <div className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[16px] shadow-[0px_2px_2px_0px_#00000040]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#3D4127]">
+                    Panduan & Syarat Dokumen Rencana Aksi
+                  </h3>
+                  <p className="text-[13px] text-[#3D4127]/70 mt-1">
+                    Teks panduan yang akan dibaca siswa di halaman Niti Bukti sebelum mengunggah file laporan PDF rencana aksi kelompok mereka.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-semibold text-[#3D4127]">
+                  Uraian Panduan & Kriteria Penilaian
+                </label>
+                <textarea
+                  value={panduanBukti}
+                  onChange={(e) => setPanduanBukti(e.target.value)}
+                  rows={8}
+                  placeholder="Ketik kriteria tugas, format penulisan, sistematika laporan aksi..."
+                  className="w-full bg-[#EDF0E8] rounded-[12px] p-4 text-[#3D4127] text-[14px] leading-relaxed border border-[#D3D8C3]/50 focus:outline-none focus:border-[#636B2F] transition-colors"
+                />
+              </div>
+
+              <div className="p-3 bg-[#EDF0E8]/50 rounded-[10px] border border-[#D3D8C3]/40 text-[12px] text-[#3D4127]/80 flex items-center gap-2">
+                <span>💡</span>
+                <span>
+                  Siswa wajib mengunggah file dokumen dalam format PDF (maks. 10 MB) sesuai panduan di atas agar dapat dinilai oleh guru.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* D. KHUSUS TAHAP 4: NITI BAKTI (Panduan Aksi Nyata) */}
+          {config.tahap === "bakti" && (
+            <div className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[16px] shadow-[0px_2px_2px_0px_#00000040]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#3D4127]">
+                    Panduan Pelaksanaan Aksi Nyata Lingkungan
+                  </h3>
+                  <p className="text-[13px] text-[#3D4127]/70 mt-1">
+                    Petunjuk operasional aksi nyata untuk 3 kategori lingkungan (Daur Ulang, Menanam Pohon, Hemat Energi) serta ketentuan dokumentasinya.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-semibold text-[#3D4127]">
+                  Uraian Petunjuk Aksi & Bukti Kegiatan
+                </label>
+                <textarea
+                  value={panduanBakti}
+                  onChange={(e) => setPanduanBakti(e.target.value)}
+                  rows={8}
+                  placeholder="Ketik instruksi pelaksanaan aksi lingkungan, kriteria foto/video dokumentasi, serta sistematika laporan..."
+                  className="w-full bg-[#EDF0E8] rounded-[12px] p-4 text-[#3D4127] text-[14px] leading-relaxed border border-[#D3D8C3]/50 focus:outline-none focus:border-[#636B2F] transition-colors"
+                />
+              </div>
+
+              <div className="p-3 bg-[#EDF0E8]/50 rounded-[10px] border border-[#D3D8C3]/40 text-[12px] text-[#3D4127]/80 flex items-center gap-2">
+                <span>💡</span>
+                <span>
+                  Siswa akan memilih kategori aksi yang mereka laksanakan, lalu mengunggah berkas PDF laporan kegiatan nyata tersebut.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* E. KHUSUS TAHAP 5: NITI SAJATI (Apresiasi & Refleksi) */}
+          {config.tahap === "sajati" && (
+            <div className="w-[828px] bg-[#FBFFF3] rounded-[16px] p-[24px] flex flex-col gap-[16px] shadow-[0px_2px_2px_0px_#00000040]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#3D4127]">
+                    Pesan Apresiasi & Refleksi Pembelajaran
+                  </h3>
+                  <p className="text-[13px] text-[#3D4127]/70 mt-1">
+                    Pesan hangat atau kata-kata motivasi penutup dari Guru yang akan dibaca siswa ketika berhasil menuntaskan seluruh 5 bab alur Niti Panca Jena.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-semibold text-[#3D4127]">
+                  Teks Ucapan Selamat & Penguatan Karakter
+                </label>
+                <textarea
+                  value={ucapanSajati}
+                  onChange={(e) => setUcapanSajati(e.target.value)}
+                  rows={8}
+                  placeholder="Ketik pesan selamat, dorongan moral, atau refleksi kelestarian lingkungan untuk siswa..."
+                  className="w-full bg-[#EDF0E8] rounded-[12px] p-4 text-[#3D4127] text-[14px] leading-relaxed border border-[#D3D8C3]/50 focus:outline-none focus:border-[#636B2F] transition-colors"
+                />
+              </div>
+
+              <div className="p-3 bg-[#EDF0E8]/50 rounded-[10px] border border-[#D3D8C3]/40 text-[12px] text-[#3D4127]/80 flex items-center gap-2">
+                <span>💡</span>
+                <span>
+                  Halaman Niti Sajati merupakan penutup rangkaian materi tempat siswa melihat lencana capaian dan memperoleh sertifikat penghargaan.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ================= PANEL PREVIEW KANAN (318px x 885px) ================= */}
@@ -800,64 +971,220 @@ export default function GuruEditModulPage() {
             </div>
           </div>
 
-          {/* List Bahan Bacaan (Accordion Items) */}
-          <div className="flex flex-col gap-[8px] w-full">
-            {deskripsiCards.map((item) => {
-              const isOpen = previewExpanded[item.id] ?? false;
-              return (
-                <div
-                  key={item.id}
-                  className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[12px] p-3 flex flex-col shadow-sm transition-all"
-                >
-                  <div
-                    onClick={() => togglePreviewAccordion(item.id)}
-                    className="flex items-center justify-between text-[14px] font-semibold text-[#3D4127] cursor-pointer"
-                  >
-                    <span className="line-clamp-1">{item.judul}</span>
-                    <Image
-                      src="/guru/panah bawah.svg"
-                      alt="Expand"
-                      width={14}
-                      height={14}
-                      className={`object-contain opacity-70 transition-transform duration-200 ${
-                        isOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </div>
-                  {isOpen && (
-                    <p className="text-[12px] text-[#3D4127]/80 mt-2 pt-2 border-t border-[#D3D8C3]/50 leading-relaxed">
-                      {item.deskripsi || "(Belum ada deskripsi bacaan)"}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* List Kartu YouTube Video Preview */}
-          <div className="flex flex-col gap-[12px] w-full mt-1">
-            {youtubeCards.map((item) => (
-              <div key={item.id} className="flex flex-col gap-1.5 w-full">
-                <span className="text-[13px] font-bold text-[#3D4127] line-clamp-2">
-                  {item.judul}
+          {/* PREVIEW KHUSUS NITI HARTI */}
+          {config.tahap === "harti" && (
+            <>
+              {/* List Bahan Bacaan (Accordion Items) */}
+              <div className="flex flex-col gap-[8px] w-full">
+                <span className="text-[12px] font-bold text-[#3D4127]/70 uppercase tracking-wider">
+                  Bahan Bacaan
                 </span>
-                <div className="w-full h-[120px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5">
-                  <Image
-                    src={item.image || "/lampiran-2.png"}
-                    alt={item.judul}
-                    fill
-                    className="object-cover"
-                  />
-                  {/* YouTube Red Play Icon Overlay */}
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                    <div className="w-10 h-7 bg-red-600 rounded-lg flex items-center justify-center shadow">
-                      <div className="w-0 h-0 border-y-[5px] border-y-transparent border-l-[9px] border-l-white ml-0.5" />
+                {deskripsiCards.map((item) => {
+                  const isOpen = previewExpanded[item.id] ?? false;
+                  return (
+                    <div
+                      key={item.id}
+                      className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[12px] p-3 flex flex-col shadow-sm transition-all"
+                    >
+                      <div
+                        onClick={() => togglePreviewAccordion(item.id)}
+                        className="flex items-center justify-between text-[13px] font-semibold text-[#3D4127] cursor-pointer"
+                      >
+                        <span className="line-clamp-1">{item.judul}</span>
+                        <Image
+                          src="/guru/panah bawah.svg"
+                          alt="Expand"
+                          width={12}
+                          height={12}
+                          className={`object-contain opacity-70 transition-transform duration-200 ${
+                            isOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </div>
+                      {isOpen && (
+                        <p className="text-[11.5px] text-[#3D4127]/80 mt-2 pt-2 border-t border-[#D3D8C3]/50 leading-relaxed">
+                          {item.deskripsi || "(Belum ada deskripsi bacaan)"}
+                        </p>
+                      )}
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* List Kartu YouTube Video Preview */}
+              <div className="flex flex-col gap-[10px] w-full mt-1">
+                <span className="text-[12px] font-bold text-[#3D4127]/70 uppercase tracking-wider">
+                  Video Pembelajaran
+                </span>
+                {youtubeCards.map((item) => (
+                  <div key={item.id} className="flex flex-col gap-1 w-full">
+                    <span className="text-[12px] font-bold text-[#3D4127] line-clamp-1">
+                      {item.judul}
+                    </span>
+                    <div className="w-full h-[110px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5">
+                      <Image
+                        src={item.image || "/lampiran-2.png"}
+                        alt={item.judul}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                        <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
+                          <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* PREVIEW KHUSUS NITI SURTI */}
+          {config.tahap === "surti" && (
+            <div className="flex flex-col gap-3 w-full">
+              {/* Box Instruksi Studi Kasus dari Guru */}
+              <div className="w-full bg-[#FBFFF3] border-2 border-[#636B2F]/30 rounded-[14px] p-3 flex flex-col gap-1.5 shadow-sm">
+                <span className="text-[12px] font-bold text-[#636B2F] flex items-center gap-1">
+                  📖 Instruksi & Studi Kasus
+                </span>
+                <p className="text-[12px] text-[#3D4127] leading-relaxed line-clamp-6">
+                  {instruksiSurti || "(Belum ada teks instruksi)"}
+                </p>
+              </div>
+
+              {/* Mockup Form Input Siswa */}
+              <div className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[14px] p-3 flex flex-col gap-1 shadow-sm opacity-90">
+                <span className="text-[12px] font-semibold text-[#3D4127]">
+                  Masalah Yang Ditemukan
+                </span>
+                <div className="w-full h-7 bg-[#EDF0E8]/70 rounded-[6px] border border-[#D3D8C3]/60 px-2 flex items-center text-[11px] text-[#3D4127]/40">
+                  Ketik masalah...
+                </div>
+              </div>
+
+              <div className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[14px] p-3 flex flex-col gap-1 shadow-sm opacity-90">
+                <span className="text-[12px] font-semibold text-[#3D4127]">
+                  Alternatif Solusi
+                </span>
+                <div className="w-full h-7 bg-[#EDF0E8]/70 rounded-[6px] border border-[#D3D8C3]/60 px-2 flex items-center text-[11px] text-[#3D4127]/40">
+                  Ketik solusi...
+                </div>
+              </div>
+
+              <div className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[14px] p-2.5 flex items-center gap-2 shadow-sm">
+                <div className="w-4 h-4 rounded-full border-2 border-[#636B2F] bg-[#636B2F] flex items-center justify-center">
+                  <span className="text-white text-[9px]">✓</span>
+                </div>
+                <span className="text-[11px] font-semibold text-[#3D4127]">
+                  Memvalidasi Kebenaran Informasi
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* PREVIEW KHUSUS NITI BUKTI */}
+          {config.tahap === "bukti" && (
+            <div className="flex flex-col gap-3 w-full">
+              {/* Box Panduan Tugas dari Guru */}
+              <div className="w-full bg-[#FBFFF3] border-2 border-[#636B2F]/30 rounded-[14px] p-3 flex flex-col gap-1.5 shadow-sm">
+                <span className="text-[12px] font-bold text-[#636B2F] flex items-center gap-1">
+                  📑 Panduan Rencana Aksi
+                </span>
+                <p className="text-[12px] text-[#3D4127] leading-relaxed line-clamp-6">
+                  {panduanBukti || "(Belum ada panduan tugas)"}
+                </p>
+              </div>
+
+              {/* Mockup Box Unggah File Siswa */}
+              <div className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[14px] p-3 flex flex-col items-center justify-center gap-2 shadow-sm text-center">
+                <span className="text-[12px] font-bold text-[#3D4127]">
+                  Unggah Rencana Aksi
+                </span>
+                <div className="w-full h-20 border-2 border-dashed border-[#D3D8C3] rounded-[10px] bg-[#EDF0E8]/50 flex flex-col items-center justify-center gap-1 p-2">
+                  <span className="text-[18px]">📄</span>
+                  <span className="text-[11px] font-medium text-[#636B2F]">
+                    Pilih Berkas PDF (Maks 10MB)
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PREVIEW KHUSUS NITI BAKTI */}
+          {config.tahap === "bakti" && (
+            <div className="flex flex-col gap-3 w-full">
+              {/* Box Panduan Aksi Nyata */}
+              <div className="w-full bg-[#FBFFF3] border-2 border-[#636B2F]/30 rounded-[14px] p-3 flex flex-col gap-1.5 shadow-sm">
+                <span className="text-[12px] font-bold text-[#636B2F] flex items-center gap-1">
+                  🌱 Panduan Aksi Nyata
+                </span>
+                <p className="text-[12px] text-[#3D4127] leading-relaxed line-clamp-6">
+                  {panduanBakti || "(Belum ada panduan aksi)"}
+                </p>
+              </div>
+
+              {/* Mockup 3 Kategori Lingkungan */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-[#3D4127]/70">
+                  Pilihan Kategori Siswa:
+                </span>
+                <div className="grid grid-cols-3 gap-1">
+                  <div className="p-1.5 bg-[#636B2F] text-white rounded-[8px] text-[10px] font-bold text-center">
+                    Daur Ulang
+                  </div>
+                  <div className="p-1.5 bg-[#EDF0E8] text-[#3D4127] rounded-[8px] text-[10px] font-semibold text-center">
+                    Tanam Pohon
+                  </div>
+                  <div className="p-1.5 bg-[#EDF0E8] text-[#3D4127] rounded-[8px] text-[10px] font-semibold text-center">
+                    Hemat Energi
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Mockup Unggah Bukti */}
+              <div className="w-full h-16 border-2 border-dashed border-[#D3D8C3] rounded-[10px] bg-[#EDF0E8]/50 flex items-center justify-center gap-2 p-2">
+                <span className="text-[16px]">📷</span>
+                <span className="text-[11px] font-medium text-[#636B2F]">
+                  Unggah Bukti Laporan PDF
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* PREVIEW KHUSUS NITI SAJATI */}
+          {config.tahap === "sajati" && (
+            <div className="flex flex-col gap-3 w-full">
+              {/* Box Ucapan Apresiasi Guru */}
+              <div className="w-full bg-[#FBFFF3] border-2 border-[#636B2F]/30 rounded-[14px] p-3.5 flex flex-col gap-2 shadow-sm bg-gradient-to-b from-[#FBFFF3] to-[#EDF0E8]/30">
+                <span className="text-[12px] font-bold text-[#636B2F] flex items-center gap-1.5">
+                  🏆 Pesan Refleksi & Apresiasi Guru
+                </span>
+                <p className="text-[12px] text-[#3D4127] italic leading-relaxed">
+                  "{ucapanSajati || "Selamat atas pencapaian Anda!"}"
+                </p>
+              </div>
+
+              {/* Mockup Capaian Kompetensi */}
+              <div className="w-full bg-[#FBFFF3] border border-[#D3D8C3] rounded-[14px] p-3 flex flex-col gap-2 shadow-sm">
+                <span className="text-[12px] font-bold text-[#3D4127]">
+                  Pencapaian Kompetensi
+                </span>
+                <div className="flex items-center gap-2 p-1.5 bg-[#EDF0E8]/70 rounded-[8px]">
+                  <span className="text-[14px]">🏆</span>
+                  <span className="text-[11px] font-semibold text-[#3D4127]">
+                    Tuntas 5 Tahap Niti Jena
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 p-1.5 bg-[#EDF0E8]/70 rounded-[8px]">
+                  <span className="text-[14px]">📜</span>
+                  <span className="text-[11px] font-semibold text-[#3D4127]">
+                    Sertifikat Siap Diterbitkan
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

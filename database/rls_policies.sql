@@ -123,3 +123,101 @@ create policy "Guru bisa mengelola konten modul"
     )
   );
 
+-- Perbarui check constraint tipe_konten jika masih terbatas bacaan/video
+alter table if exists public.konten_modul drop constraint if exists konten_modul_tipe_konten_check;
+alter table if exists public.konten_modul add constraint konten_modul_tipe_konten_check
+  check (tipe_konten in ('bacaan','video','instruksi','panduan_tugas','ucapan_selamat'));
+
+-- ==============================================================================
+-- POLICY UNTUK TABEL ABSENSI
+-- ==============================================================================
+alter table if exists public.absensi enable row level security;
+
+drop policy if exists "Siswa bisa membaca absensi miliknya" on public.absensi;
+drop policy if exists "Guru bisa mengelola semua absensi" on public.absensi;
+
+-- Siswa hanya bisa membaca riwayat absensi miliknya sendiri
+create policy "Siswa bisa membaca absensi miliknya"
+  on public.absensi for select
+  to authenticated
+  using (siswa_id = auth.uid());
+
+-- Guru bisa mengelola semua data absensi (membaca, mencatat, mengedit, menghapus)
+create policy "Guru bisa mengelola semua absensi"
+  on public.absensi for all
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  );
+
+-- ==============================================================================
+-- POLICY UNTUK TABEL NILAI
+-- ==============================================================================
+alter table if exists public.nilai enable row level security;
+
+drop policy if exists "Siswa bisa membaca nilai miliknya" on public.nilai;
+drop policy if exists "Guru bisa mengelola semua nilai" on public.nilai;
+
+-- Siswa hanya bisa melihat nilai miliknya sendiri
+create policy "Siswa bisa membaca nilai miliknya"
+  on public.nilai for select
+  to authenticated
+  using (siswa_id = auth.uid());
+
+-- Guru bisa mengelola semua nilai (memberi nilai, mengubah nilai, menghapus nilai)
+create policy "Guru bisa mengelola semua nilai"
+  on public.nilai for all
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  );
+
+-- ==============================================================================
+-- POLICY UNTUK TABEL SERTIFIKAT
+-- ==============================================================================
+alter table if exists public.sertifikat enable row level security;
+
+drop policy if exists "Siswa bisa membaca sertifikat miliknya" on public.sertifikat;
+drop policy if exists "Guru bisa mengelola semua sertifikat" on public.sertifikat;
+
+-- Siswa hanya bisa melihat sertifikat miliknya sendiri
+create policy "Siswa bisa membaca sertifikat miliknya"
+  on public.sertifikat for select
+  to authenticated
+  using (siswa_id = auth.uid());
+
+-- Guru bisa mengelola semua sertifikat siswa (menerbitkan, membaca, mengedit, menghapus)
+create policy "Guru bisa mengelola semua sertifikat"
+  on public.sertifikat for all
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  );
+
