@@ -632,13 +632,6 @@ export default function GuruDetailPenilaianPage({
           </label>
           <div className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 flex items-center justify-between">
             <span>{selectedTanggal}</span>
-            <Image
-              src="/guru/kalender.svg"
-              alt="Select Tanggal"
-              width={18}
-              height={18}
-              className="object-contain opacity-70"
-            />
           </div>
         </div>
       </div>

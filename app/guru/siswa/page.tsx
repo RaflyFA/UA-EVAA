@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 interface SiswaItem {
@@ -13,14 +14,23 @@ interface SiswaItem {
   progress: boolean[]; // [harti, surti, bukti, bakti, sajati]
 }
 
+interface SertifikatItem {
+  id: string;
+  nomor: string;
+  url_file: string | null;
+  tanggal: string;
+}
+
 const TAHAP_NITI_ORDER = ["harti", "surti", "bukti", "bakti", "sajati"] as const;
 const TAHAP_NITI_LABELS = ["Niti Harti", "Niti Surti", "Niti Bukti", "Niti Bakti", "Niti Sajati"];
 
 export default function GuruSiswaPenilaianPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKelas, setSelectedKelas] = useState("Semua Kelas");
   const [selectedProgres, setSelectedProgres] = useState("Semua Progres");
   const [siswaData, setSiswaData] = useState<SiswaItem[]>([]);
+  const [sertifikatMap, setSertifikatMap] = useState<Record<string, SertifikatItem>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Dropdown states
@@ -29,6 +39,15 @@ export default function GuruSiswaPenilaianPage() {
 
   // Modal Rekap Nilai
   const [isRekapOpen, setIsRekapOpen] = useState(false);
+
+  // Modal Sertifikat states
+  const [isSertifikatModalOpen, setIsSertifikatModalOpen] = useState(false);
+  const [selectedSiswaForCert, setSelectedSiswaForCert] = useState<SiswaItem | null>(null);
+  const [certNomor, setCertNomor] = useState("");
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [isUploadingCert, setIsUploadingCert] = useState(false);
+  const [certError, setCertError] = useState<string | null>(null);
+  const [certSuccess, setCertSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -65,6 +84,27 @@ export default function GuruSiswaPenilaianPage() {
           console.warn("Gagal mengambil progress siswa:", prErr.message);
         }
 
+        // 3. Ambil data sertifikat yang sudah ada
+        const { data: certRows, error: certErr } = await supabase
+          .from("sertifikat")
+          .select("id, siswa_id, nomor_sertifikat, url_file, tanggal_terbit")
+          .in("siswa_id", studentIds);
+
+        if (certErr) {
+          console.warn("Gagal mengambil data sertifikat:", certErr.message);
+        } else if (certRows) {
+          const cMap: Record<string, SertifikatItem> = {};
+          certRows.forEach((c) => {
+            cMap[c.siswa_id] = {
+              id: c.id,
+              nomor: c.nomor_sertifikat,
+              url_file: c.url_file,
+              tanggal: c.tanggal_terbit,
+            };
+          });
+          setSertifikatMap(cMap);
+        }
+
         // Map progress per siswa
         const mapped: SiswaItem[] = profiles.map((p) => {
           const studentProgs = (progressRows || []).filter(
@@ -95,6 +135,123 @@ export default function GuruSiswaPenilaianPage() {
 
     loadData();
   }, []);
+
+  const handleOpenCertModal = (siswa: SiswaItem) => {
+    setSelectedSiswaForCert(siswa);
+    const existingCert = sertifikatMap[siswa.id];
+    if (existingCert) {
+      setCertNomor(existingCert.nomor);
+    } else {
+      const randomNum = String(Math.floor(100 + Math.random() * 900));
+      setCertNomor(`EVAA/SERT/${new Date().getFullYear()}/${randomNum}`);
+    }
+    setCertFile(null);
+    setCertError(null);
+    setCertSuccess(null);
+    setIsSertifikatModalOpen(true);
+  };
+
+  const handleSubmitCert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSiswaForCert) return;
+    if (!certNomor.trim()) {
+      setCertError("Nomor sertifikat wajib diisi.");
+      return;
+    }
+
+    const existingCert = sertifikatMap[selectedSiswaForCert.id];
+    if (!certFile && !existingCert?.url_file) {
+      setCertError("Silakan pilih berkas sertifikat (PDF atau gambar).");
+      return;
+    }
+
+    try {
+      setIsUploadingCert(true);
+      setCertError(null);
+
+      let fileUrl = existingCert?.url_file || null;
+
+      if (certFile) {
+        const fileExt = certFile.name.split(".").pop();
+        const filePath = `${selectedSiswaForCert.id}/${Date.now()}_sertifikat.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("sertifikat")
+          .upload(filePath, certFile, { upsert: true });
+
+        if (uploadError) {
+          throw new Error(
+            `Gagal upload ke storage: ${uploadError.message}. Pastikan bucket 'sertifikat' publik di Supabase Storage sudah dibuat.`
+          );
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("sertifikat")
+          .getPublicUrl(filePath);
+
+        fileUrl = urlData?.publicUrl || null;
+      }
+
+      const now = new Date().toISOString();
+      if (existingCert) {
+        const { error: updateErr } = await supabase
+          .from("sertifikat")
+          .update({
+            nomor_sertifikat: certNomor.trim(),
+            url_file: fileUrl,
+            tanggal_terbit: now,
+          })
+          .eq("id", existingCert.id);
+
+        if (updateErr) throw updateErr;
+
+        setSertifikatMap((prev) => ({
+          ...prev,
+          [selectedSiswaForCert.id]: {
+            id: existingCert.id,
+            nomor: certNomor.trim(),
+            url_file: fileUrl,
+            tanggal: now,
+          },
+        }));
+      } else {
+        const { data: newCert, error: insertErr } = await supabase
+          .from("sertifikat")
+          .insert({
+            siswa_id: selectedSiswaForCert.id,
+            nomor_sertifikat: certNomor.trim(),
+            url_file: fileUrl,
+            tanggal_terbit: now,
+          })
+          .select("id")
+          .single();
+
+        if (insertErr) throw insertErr;
+
+        setSertifikatMap((prev) => ({
+          ...prev,
+          [selectedSiswaForCert.id]: {
+            id: newCert?.id || "temp-id",
+            nomor: certNomor.trim(),
+            url_file: fileUrl,
+            tanggal: now,
+          },
+        }));
+      }
+
+      setCertSuccess("Sertifikat berhasil diterbitkan!");
+      setTimeout(() => {
+        setIsSertifikatModalOpen(false);
+        setCertSuccess(null);
+      }, 1200);
+    } catch (err: unknown) {
+      const errObj = err as Error;
+      console.error("Gagal menerbitkan sertifikat:", errObj);
+      setCertError(errObj.message || "Gagal menerbitkan sertifikat.");
+    } finally {
+      setIsUploadingCert(false);
+    }
+  };
 
   // Tutup dropdown jika klik di luar
   useEffect(() => {
@@ -299,13 +456,14 @@ export default function GuruSiswaPenilaianPage() {
               className="object-contain"
             />
           </div>
-          <div className="flex-[2] truncate">Kelas</div>
-          <div className="flex-[4] flex items-center justify-between pr-4">
+          <div className="flex-[1.5] truncate">Kelas</div>
+          <div className="flex-[3.5] flex items-center justify-between pr-4">
             <span className="truncate">Progres 5 Tahap Niti</span>
             <span className="text-[11px] text-[#9CA08D]/80">
               Harti • Surti • Bukti • Bakti • Sajati
             </span>
           </div>
+          <div className="flex-[2] text-center truncate">Sertifikat</div>
           <div className="w-6" />
         </div>
 
@@ -345,11 +503,13 @@ export default function GuruSiswaPenilaianPage() {
           <div className="flex flex-col gap-[8px] w-full max-w-[1110px]">
             {filteredData.map((row) => {
               const completedStages = row.progress.filter(Boolean).length;
+              const cert = sertifikatMap[row.id];
+              const isAllComplete = completedStages === 5;
 
               return (
-                <Link
+                <div
                   key={row.id}
-                  href={`/guru/siswa/${row.id}`}
+                  onClick={() => router.push(`/guru/siswa/${row.id}`)}
                   className="w-full h-[52px] px-[12px] flex items-center gap-[10px] text-[#3D4127] transition-all border-b border-[#EDF0E8] last:border-0 hover:bg-[#EDF0E8]/40 rounded-xl cursor-pointer group"
                 >
                   {/* Kolom Siswa (Avatar + Nama) */}
@@ -368,14 +528,14 @@ export default function GuruSiswaPenilaianPage() {
                   </div>
 
                   {/* Kolom Kelas */}
-                  <div className="flex-[2] text-[14px] font-semibold text-[#3D4127]/80 truncate">
+                  <div className="flex-[1.5] text-[14px] font-semibold text-[#3D4127]/80 truncate">
                     <span className="px-2.5 py-0.5 rounded-md bg-[#EDF0E8] text-[#3D4127]">
                       {row.kelas}
                     </span>
                   </div>
 
                   {/* Kolom Progres Modul (5 Kapsul) */}
-                  <div className="flex-[4] flex items-center gap-[8px]">
+                  <div className="flex-[3.5] flex items-center gap-[6px]">
                     {row.progress.map((isFilled, idx) => (
                       <div
                         key={idx}
@@ -396,6 +556,53 @@ export default function GuruSiswaPenilaianPage() {
                     </span>
                   </div>
 
+                  {/* Kolom Status & Aksi Sertifikat */}
+                  <div className="flex-[2] flex items-center justify-center">
+                    {cert ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenCertModal(row);
+                          }}
+                          title="Klik untuk melihat nomor / memperbarui berkas sertifikat"
+                          className="px-2.5 py-1 rounded-[10px] bg-[#636B2F]/15 hover:bg-[#636B2F]/25 text-[#636B2F] text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-[#636B2F]/30"
+                        >
+                          <span>✓ Terbit</span>
+                        </button>
+                        {cert.url_file && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(cert.url_file!, "_blank");
+                            }}
+                            title="Buka berkas dokumen sertifikat di tab baru"
+                            className="w-6 h-6 rounded-[8px] bg-[#EDF0E8] hover:bg-[#D3D8C3] text-[#3D4127] flex items-center justify-center text-[12px] font-bold transition-colors cursor-pointer"
+                          >
+                            ↗
+                          </button>
+                        )}
+                      </div>
+                    ) : isAllComplete ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenCertModal(row);
+                        }}
+                        className="px-2.5 py-1 rounded-[10px] bg-[#eab308]/20 hover:bg-[#eab308]/35 text-[#854d0e] text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-[#eab308]/50 shadow-xs"
+                      >
+                        <span>+ Terbitkan</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-[#9CA08D]">
+                        Belum Lengkap
+                      </span>
+                    )}
+                  </div>
+
                   {/* Tombol Opsi / Arrow */}
                   <div className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0">
                     <svg
@@ -412,7 +619,7 @@ export default function GuruSiswaPenilaianPage() {
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -510,6 +717,156 @@ export default function GuruSiswaPenilaianPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Terbitkan / Kelola Sertifikat */}
+      {isSertifikatModalOpen && selectedSiswaForCert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="w-full max-w-[540px] bg-[#FBFFF3] rounded-[28px] p-6 sm:p-7 shadow-[0px_4px_16px_rgba(0,0,0,0.15)] border border-[#D3D8C3] flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            {/* Header Modal */}
+            <div className="flex items-center justify-between border-b border-[#D3D8C3] pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[22px]">📜</span>
+                <div>
+                  <h3 className="text-[18px] font-bold text-[#3D4127]">
+                    {sertifikatMap[selectedSiswaForCert.id]
+                      ? "Perbarui Sertifikat Siswa"
+                      : "Terbitkan Sertifikat Siswa"}
+                  </h3>
+                  <p className="text-[12px] text-[#3D4127]/70">
+                    Unggah berkas sertifikat resmi (PDF/gambar) untuk siswa bersangkutan.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSertifikatModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#3D4127]/60 hover:text-[#3D4127] hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Info Singkat Siswa */}
+            <div className="flex items-center gap-3 p-3 rounded-[16px] bg-[#EDF0E8] border border-[#D3D8C3]/60">
+              <div className="w-10 h-10 rounded-full overflow-hidden relative border border-[#3D4127]/10 bg-white">
+                <Image
+                  src={selectedSiswaForCert.avatar}
+                  alt={selectedSiswaForCert.nama}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[14px] font-bold text-[#3D4127]">
+                  {selectedSiswaForCert.nama}
+                </span>
+                <span className="text-[12px] text-[#3D4127]/75 font-medium">
+                  Kelas {selectedSiswaForCert.kelas} • Status:{" "}
+                  {selectedSiswaForCert.progress.filter(Boolean).length}/5 Tahap Disetujui
+                </span>
+              </div>
+            </div>
+
+            {/* Form Input */}
+            <form onSubmit={handleSubmitCert} className="flex flex-col gap-4">
+              {/* Nomor Sertifikat */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-bold text-[#3D4127]">
+                  Nomor Sertifikat <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={certNomor}
+                  onChange={(e) => setCertNomor(e.target.value)}
+                  placeholder="Contoh: EVAA/SERT/2026/001"
+                  required
+                  className="w-full h-[46px] bg-white border border-[#D3D8C3] rounded-[14px] px-4 text-[14px] text-[#3D4127] font-medium focus:outline-none focus:border-[#636B2F]"
+                />
+                <span className="text-[11px] text-[#3D4127]/60">
+                  Nomor resmi sertifikat yang akan tercatat di akun siswa.
+                </span>
+              </div>
+
+              {/* Upload Berkas Sertifikat */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-bold text-[#3D4127]">
+                  Berkas Dokumen Sertifikat (PDF / Gambar){" "}
+                  {!sertifikatMap[selectedSiswaForCert.id]?.url_file && (
+                    <span className="text-red-500">*</span>
+                  )}
+                </label>
+
+                {sertifikatMap[selectedSiswaForCert.id]?.url_file && (
+                  <div className="flex items-center justify-between px-3.5 py-2 rounded-[12px] bg-[#636B2F]/10 border border-[#636B2F]/30 text-[12px]">
+                    <span className="text-[#3D4127] font-medium">
+                      Berkas saat ini sudah tersimpan
+                    </span>
+                    <a
+                      href={sertifikatMap[selectedSiswaForCert.id].url_file!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold text-[#636B2F] hover:underline flex items-center gap-1"
+                    >
+                      Lihat Berkas ↗
+                    </a>
+                  </div>
+                )}
+
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setCertFile(file);
+                  }}
+                  className="w-full file:mr-3 file:py-2 file:px-4 file:rounded-[10px] file:border-0 file:text-[12px] file:font-semibold file:bg-[#636B2F] file:text-white hover:file:bg-[#525826] file:cursor-pointer border border-[#D3D8C3] bg-white rounded-[14px] p-2 text-[13px] text-[#3D4127]"
+                />
+                <span className="text-[11px] text-[#3D4127]/60">
+                  Format yang didukung: .pdf, .jpg, .png (Maks 10MB)
+                </span>
+              </div>
+
+              {/* Feedback Error / Success */}
+              {certError && (
+                <div className="p-3 rounded-[12px] bg-red-100 border border-red-300 text-red-700 text-[12px] font-medium">
+                  {certError}
+                </div>
+              )}
+
+              {certSuccess && (
+                <div className="p-3 rounded-[12px] bg-green-100 border border-green-300 text-green-800 text-[12px] font-bold">
+                  {certSuccess}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#D3D8C3]">
+                <button
+                  type="button"
+                  onClick={() => setIsSertifikatModalOpen(false)}
+                  disabled={isUploadingCert}
+                  className="px-4 py-2 text-[#3D4127]/70 hover:text-[#3D4127] font-bold text-[14px] rounded-[12px] transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingCert}
+                  className="px-5 py-2.5 bg-[#636B2F] hover:bg-[#525826] text-white font-bold text-[14px] rounded-[14px] transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {isUploadingCert ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Mengunggah...</span>
+                    </>
+                  ) : (
+                    <span>Simpan & Terbitkan</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

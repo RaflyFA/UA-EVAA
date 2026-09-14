@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -37,14 +36,6 @@ export default function GuruTopbar() {
             <span className="text-[11px] text-[#3D4127]/60">
               {profile?.nomor_induk ? `NIP. ${profile.nomor_induk}` : "Guru Pengampu"}
             </span>
-          </div>
-          <div className="w-8 h-8 rounded-full overflow-hidden relative border border-[#3D4127]/20 bg-[#EDF0E8] flex items-center justify-center">
-            <Image
-              src="/guru/profile.jpg"
-              alt="Profil Guru"
-              fill
-              className="object-cover"
-            />
           </div>
 
           <button

@@ -30,17 +30,17 @@ const statusConfig: {
   {
     value: "sakit",
     label: "Sakit",
-    activeClass: "bg-[#0284c7] text-white font-bold shadow-xs",
+    activeClass: "bg-[#636B2F] text-white font-bold shadow-xs",
   },
   {
     value: "izin",
     label: "Izin",
-    activeClass: "bg-[#d97706] text-white font-bold shadow-xs",
+    activeClass: "bg-[#636B2F] text-white font-bold shadow-xs",
   },
   {
     value: "alpa",
     label: "Alpa",
-    activeClass: "bg-[#dc2626] text-white font-bold shadow-xs",
+    activeClass: "bg-[#636B2F] text-white font-bold shadow-xs",
   },
 ];
 
@@ -359,13 +359,6 @@ export default function GuruDetailAbsensiPage() {
             </label>
             <div className="w-full bg-[#EDF0E8] rounded-[12px] px-3.5 py-2.5 text-[#3D4127] font-bold text-[14px] border border-[#D3D8C3]/50 flex items-center justify-between">
               <span>{formattedTanggal}</span>
-              <Image
-                src="/guru/kalender.svg"
-                alt="Kalender"
-                width={16}
-                height={16}
-                className="object-contain opacity-70"
-              />
             </div>
           </div>
 
@@ -386,17 +379,16 @@ export default function GuruDetailAbsensiPage() {
         {/* Quick Summary Chips & Quick Action */}
         <div className="flex items-center justify-between pt-2 border-t border-[#3D4127]/10 flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap text-[12px]">
-            <span className="font-semibold text-[#3D4127]/80">Ringkasan:</span>
             <span className="px-2.5 py-1 rounded-full bg-[#636B2F]/15 text-[#636B2F] font-bold">
               Hadir: {stats.hadir}
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-[#0284c7]/15 text-[#0284c7] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-[#636B2F]/15 text-[#636B2F] font-bold">
               Sakit: {stats.sakit}
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-[#d97706]/15 text-[#d97706] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-[#636B2F]/15 text-[#636B2F] font-bold">
               Izin: {stats.izin}
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-[#dc2626]/15 text-[#dc2626] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-[#636B2F]/15 text-[#636B2F] font-bold">
               Alpa: {stats.alpa}
             </span>
           </div>
@@ -404,7 +396,7 @@ export default function GuruDetailAbsensiPage() {
           <button
             type="button"
             onClick={() => handleSetAllStatus("hadir")}
-            className="text-[12px] font-bold text-[#636B2F] hover:bg-[#636B2F]/10 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            className="bg-[#636B2F] hover:bg-[#525826] text-[#FBFFF3] text-[12px] font-bold px-3.5 py-2 rounded-[10px] transition-all cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-[0.98]"
           >
             <span>✓</span> Tandai Semua Hadir
           </button>

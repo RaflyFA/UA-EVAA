@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -12,13 +13,18 @@ export default function Topbar({ onMenuClick, variant = "light" }: TopbarProps) 
 
   return (
     <header className="w-full max-w-[354px] flex justify-between items-center z-10">
-      <h1
-        className={`text-xl font-bold tracking-wider drop-shadow-sm ${
-          isDarkText ? "text-[#3D4127]" : "text-[#FBFFF3]"
-        }`}
+      <Link
+        href="/"
+        className="hover:opacity-80 transition-opacity cursor-pointer inline-block"
       >
-        UA-EVAA
-      </h1>
+        <h1
+          className={`text-xl font-bold tracking-wider drop-shadow-sm ${
+            isDarkText ? "text-[#3D4127]" : "text-[#FBFFF3]"
+          }`}
+        >
+          UA-EVAA
+        </h1>
+      </Link>
       <button
         onClick={onMenuClick}
         className="flex items-center justify-center focus:outline-none hover:opacity-80 transition-opacity cursor-pointer"

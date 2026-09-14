@@ -19,6 +19,12 @@ export default function NitiSajatiPage() {
   const [ucapan, setUcapan] = useState<string>(
     "Selamat! Anda telah menuntaskan seluruh rangkaian proses pembelajaran Niti Panca Jena dengan penuh dedikasi. Teruslah menjadi pelopor penjaga kelestarian lingkungan dan terapkan nilai kearifan lokal dalam keseharian!"
   );
+  const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
+  const [sertifikat, setSertifikat] = useState<{
+    nomor: string;
+    url: string | null;
+    tanggal: string;
+  } | null>(null);
 
   // Proteksi akses & tandai Niti Sajati selesai saat dikunjungi
   useEffect(() => {
@@ -37,8 +43,37 @@ export default function NitiSajatiPage() {
         if (kontenData?.deskripsi) {
           setUcapan(kontenData.deskripsi);
         }
+
+        // Ambil seluruh status progress_siswa untuk menentukan capaian 1-4
+        const { data: allProg } = await supabase
+          .from("progress_siswa")
+          .select("tahap_niti, status")
+          .eq("siswa_id", profile.id);
+
+        if (allProg) {
+          const pMap: Record<string, boolean> = {};
+          allProg.forEach((p) => {
+            pMap[p.tahap_niti] = p.status === "disetujui";
+          });
+          setProgressMap(pMap);
+        }
+
+        // Ambil sertifikat jika sudah diterbitkan guru
+        const { data: certData } = await supabase
+          .from("sertifikat")
+          .select("nomor_sertifikat, url_file, tanggal_terbit")
+          .eq("siswa_id", profile.id)
+          .maybeSingle();
+
+        if (certData) {
+          setSertifikat({
+            nomor: certData.nomor_sertifikat,
+            url: certData.url_file,
+            tanggal: certData.tanggal_terbit,
+          });
+        }
       } catch (err) {
-        console.error("Gagal mengambil ucapan Niti Sajati:", err);
+        console.error("Gagal mengambil data Niti Sajati:", err);
       }
 
       const { data: prog } = await supabase
@@ -65,6 +100,8 @@ export default function NitiSajatiPage() {
           })
           .eq("siswa_id", profile.id)
           .eq("tahap_niti", "sajati");
+        
+        setProgressMap((prev) => ({ ...prev, sajati: true }));
       }
     }
 
@@ -74,27 +111,31 @@ export default function NitiSajatiPage() {
   const achievements = [
     {
       id: 1,
-      title: "Pencapaian 1",
-      description: "Lorem ipsum dolor sit amet.",
-      isUnlocked: true,
+      title: "Pencapaian 1 (Niti Harti)",
+      description:
+        "Memahami hubungan timbal balik komponen biotik-abiotik serta dampak intervensi manusia pada ekosistem.",
+      isUnlocked: progressMap["harti"] ?? false,
     },
     {
       id: 2,
-      title: "Pencapaian 2",
-      description: "Lorem ipsum dolor sit amet.",
-      isUnlocked: true,
+      title: "Pencapaian 2 (Niti Surti)",
+      description:
+        "Menumbuhkan empati ekologis dan merumuskan gagasan rencana aksi solusi kelestarian lingkungan hidup.",
+      isUnlocked: progressMap["surti"] ?? false,
     },
     {
       id: 3,
-      title: "Pencapaian 3",
-      description: "Lorem ipsum dolor sit amet.",
-      isUnlocked: false,
+      title: "Pencapaian 3 (Niti Bukti)",
+      description:
+        "Melaksanakan aksi nyata pelestarian lingkungan dan mengunggah dokumentasi bukti kegiatan.",
+      isUnlocked: progressMap["bukti"] ?? false,
     },
     {
       id: 4,
-      title: "Pencapaian 4",
-      description: "Lorem ipsum dolor sit amet.",
-      isUnlocked: false,
+      title: "Pencapaian 4 (Niti Bakti)",
+      description:
+        "Menerapkan komitmen pelestarian lingkungan secara berkelanjutan bersama keluarga dan masyarakat.",
+      isUnlocked: progressMap["bakti"] ?? false,
     },
   ];
 
@@ -224,38 +265,107 @@ export default function NitiSajatiPage() {
 
         {/* Section Sertifikat */}
         <div className="w-full max-w-[354px] bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-4">
-          <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
-            Sertifikat
-          </h2>
-
-          {/* Inner Certificate Container / Placeholder */}
-          <div className="relative w-full h-[180px] rounded-[16px] overflow-hidden flex flex-col items-center justify-center p-4 group cursor-pointer border border-[#D3D8C3]">
-            {/* Latar Belakang Placeholder Sertifikat dengan Corak Abstrak */}
-            <div
-              className="absolute inset-0 bg-cover bg-center filter blur-[2px] scale-105 transition-transform duration-300 group-hover:scale-110"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 80% 20%, #1e40af 0%, transparent 40%), radial-gradient(circle at 20% 80%, #0284c7 0%, transparent 40%), linear-gradient(135deg, #0f172a 0%, #334155 100%)",
-              }}
-            />
-
-            {/* Dark Overlay untuk legibilitas teks */}
-            <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px]" />
-
-            {/* Konten Tombol Unduh Sertifikat */}
-            <div className="relative z-10 flex items-center justify-center gap-2.5 text-white bg-black/20 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/20 hover:bg-black/30 transition-all">
-              <Image
-                src="/icon-unduh.svg"
-                alt="Unduh Icon"
-                width={20}
-                height={20}
-                className="object-contain filter brightness-0 invert"
-              />
-              <span className="text-[14px] font-[600] tracking-wide text-white">
-                Unduh Sertifikat
+          <div className="flex items-center justify-between">
+            <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
+              Sertifikat Kelulusan
+            </h2>
+            {sertifikat ? (
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#636B2F]/15 text-[#636B2F]">
+                Resmi Terbit
               </span>
-            </div>
+            ) : (
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EDF0E8] text-[#9CA08D]">
+                Menunggu Guru
+              </span>
+            )}
           </div>
+
+          {sertifikat ? (
+            <div className="flex flex-col gap-3">
+              {/* Detail Info Sertifikat */}
+              <div className="flex flex-col gap-1.5 text-[12px] bg-[#EDF0E8] p-3.5 rounded-[16px] border border-[#D3D8C3]/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#3D4127]/60">Nomor:</span>
+                  <span className="font-bold text-[#3D4127]">{sertifikat.nomor}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#3D4127]/60">Tanggal Terbit:</span>
+                  <span className="font-semibold text-[#3D4127]">
+                    {new Date(sertifikat.tanggal).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Inner Certificate Card dengan Tombol Unduh */}
+              <div
+                onClick={() => {
+                  if (sertifikat.url) {
+                    window.open(sertifikat.url, "_blank");
+                  }
+                }}
+                className="relative w-full h-[180px] rounded-[16px] overflow-hidden flex flex-col items-center justify-center p-4 group cursor-pointer border border-[#636B2F]/40 shadow-sm transition-all active:scale-[0.98]"
+              >
+                <div
+                  className="absolute inset-0 bg-cover bg-center filter blur-[1.5px] scale-105 transition-transform duration-300 group-hover:scale-110"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(circle at 80% 20%, #4d5722 0%, transparent 40%), radial-gradient(circle at 20% 80%, #636B2F 0%, transparent 40%), linear-gradient(135deg, #272a19 0%, #3D4127 100%)",
+                  }}
+                />
+
+                <div className="absolute inset-0 bg-black/35 backdrop-blur-[0.5px]" />
+
+                <div className="relative z-10 flex flex-col items-center gap-2 text-center">
+                  <div className="flex items-center justify-center gap-2.5 text-white bg-black/30 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/30 hover:bg-black/45 transition-all shadow-md">
+                    <Image
+                      src="/icon-unduh.svg"
+                      alt="Unduh Icon"
+                      width={20}
+                      height={20}
+                      className="object-contain filter brightness-0 invert"
+                    />
+                    <span className="text-[14px] font-[600] tracking-wide text-white">
+                      Lihat / Unduh Sertifikat
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-white/80">
+                    Klik untuk membuka berkas sertifikat di tab baru
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full rounded-[16px] border border-dashed border-[#D3D8C3] bg-[#EDF0E8]/40 p-5 flex flex-col items-center text-center gap-2.5">
+              <div className="w-10 h-10 rounded-full bg-[#D3D8C3]/50 flex items-center justify-center text-[#3D4127]/60">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <p className="text-[13px] font-bold text-[#3D4127]">
+                Sertifikat Belum Diterbitkan
+              </p>
+              <p className="text-[12px] text-[#3D4127]/70 leading-[18px]">
+                Guru belum mengunggah sertifikat resmi Anda. Setelah guru menerbitkannya melalui akun guru, sertifikat akan langsung muncul di sini untuk dilihat dan diunduh.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

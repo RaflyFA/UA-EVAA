@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
 import Sidebar from "@/components/Sidebar";
@@ -35,22 +34,22 @@ const statusConfig: Record<
 > = {
   hadir: {
     label: "Hadir",
-    badgeClass: "bg-[#16a34a]/15 text-[#15803d] border border-[#16a34a]/30",
+    badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
     icon: "✓",
   },
   sakit: {
     label: "Sakit",
-    badgeClass: "bg-[#0284c7]/15 text-[#0369a1] border border-[#0284c7]/30",
+    badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
     icon: "✚",
   },
   izin: {
     label: "Izin",
-    badgeClass: "bg-[#d97706]/15 text-[#b45309] border border-[#d97706]/30",
+    badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
     icon: "✉",
   },
   alpa: {
     label: "Alpa",
-    badgeClass: "bg-[#dc2626]/15 text-[#b91c1c] border border-[#dc2626]/30",
+    badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
     icon: "✕",
   },
 };
@@ -68,6 +67,7 @@ export default function ProfilSiswaPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<AbsensiRecord[]>([]);
   const [penilaianList, setPenilaianList] = useState<TahapPenilaianItem[]>([]);
+  const [filterAbsensi, setFilterAbsensi] = useState<"semua" | "hadir" | "absen">("semua");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -227,113 +227,105 @@ export default function ProfilSiswaPage() {
     }
   };
 
+  // Helper mendapatkan tanggal dan nama bulan singkat untuk card mobile
+  const getDayAndMonth = (tanggalStr: string) => {
+    try {
+      const d = new Date(tanggalStr + "T00:00:00");
+      const day = d.getDate();
+      const month = d.toLocaleDateString("id-ID", { month: "short" });
+      return { day, month };
+    } catch {
+      return { day: "-", month: "-" };
+    }
+  };
+
+  // Data absensi yang difilter
+  const filteredRecords = useMemo(() => {
+    if (filterAbsensi === "hadir") {
+      return attendanceRecords.filter((r) => r.status === "hadir");
+    }
+    if (filterAbsensi === "absen") {
+      return attendanceRecords.filter((r) => r.status !== "hadir");
+    }
+    return attendanceRecords;
+  }, [attendanceRecords, filterAbsensi]);
+
   return (
     <SiswaGuard>
-      <div className="min-h-screen bg-[#EDF0E8] flex flex-col font-sans">
-        {/* Topbar */}
-        <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
+      <main className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center px-4 sm:px-6 pt-4 pb-16 relative overflow-x-hidden font-sans">
+        {/* Container utama dengan lebar konsisten pada mobile dan responsif sampai desktop */}
+        <div className="w-full max-w-[354px] sm:max-w-[540px] md:max-w-[720px] lg:max-w-[860px] flex flex-col items-center gap-5 z-10 flex-1">
+          {/* Topbar Reusable */}
+          <div className="w-full z-20">
+            <Topbar onMenuClick={() => setIsSidebarOpen(true)} variant="dark" />
+          </div>
 
-        {/* Sidebar */}
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
+          {/* Sidebar */}
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
 
-        {/* Main Content Area */}
-        <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 py-6 flex flex-col gap-6">
-          {/* Header Card: Profil Siswa */}
-          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-6 sm:p-8 shadow-[0px_2px_4px_0px_#00000020] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-[#D3D8C3]/50">
-            <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-full overflow-hidden relative flex-shrink-0 border-3 border-[#636B2F] bg-[#EDF0E8] shadow-sm">
-                <Image
-                  src={profile?.avatar_url || "/guru/profile.jpg"}
-                  alt={profile?.nama_lengkap || "Profil Siswa"}
-                  fill
-                  className="object-cover"
-                />
+          {/* Header Card: Profil Siswa (Tanpa Gambar Profil) */}
+          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-5 sm:p-6 shadow-[0px_2px_4px_0px_#00000015] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-[#D3D8C3]/60">
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-[30px] sm:text-[30px] font-black text-[#3D4127] leading-tight tracking-tight">
+                  {profile?.nama_lengkap || "Siswa"}
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#5B6628] text-white tracking-wider">
+                  {profile?.role || "Siswa"}
+                </span>
               </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-[22px] sm:text-[26px] font-bold text-[#3D4127] leading-tight">
-                    {profile?.nama_lengkap || "Siswa"}
-                  </h1>
-                  <span className="px-3 py-0.5 rounded-full text-[11px] font-extrabold uppercase bg-[#636B2F] text-white tracking-wider">
-                    {profile?.role || "Siswa"}
+              <div className="flex items-center gap-2 text-[13px] text-[#3D4127]/80 font-medium flex-wrap">
+                <span className="px-2.5 py-1 rounded-[10px] bg-[#EDF0E8] font-semibold text-[#3D4127]">
+                  Kelas {profile?.kelas || "VII-A"}
+                </span>
+                <span className="px-2.5 py-1 rounded-[10px] bg-[#EDF0E8] font-semibold text-[#3D4127]">
+                  NISN: {profile?.nomor_induk || "-"}
+                </span>
+                {user?.email && (
+                  <span className="text-[#3D4127]/60 text-[12px]">
+                    {user.email}
                   </span>
-                </div>
-                <p className="text-[14px] text-[#3D4127]/80 font-medium flex items-center gap-2 flex-wrap">
-                  <span>
-                    Kelas:{" "}
-                    <strong className="text-[#3D4127]">
-                      {profile?.kelas || "Belum Dipilih"}
-                    </strong>
-                  </span>
-                  <span>•</span>
-                  <span>
-                    NISN:{" "}
-                    <strong className="text-[#3D4127]">
-                      {profile?.nomor_induk || "-"}
-                    </strong>
-                  </span>
-                  {user?.email && (
-                    <>
-                      <span>•</span>
-                      <span className="text-[#3D4127]/60 text-[13px]">{user.email}</span>
-                    </>
-                  )}
-                </p>
+                )}
               </div>
             </div>
 
             <Link
               href="/alur"
-              className="px-5 py-2.5 bg-[#636B2F] hover:bg-[#525826] text-white rounded-[14px] font-bold text-[14px] transition-all shadow-sm flex items-center gap-2 self-stretch sm:self-auto justify-center"
+              className="w-full sm:w-auto px-5 py-2.5 bg-[#5B6628] hover:bg-[#4d5722] text-[#FBFFF3] rounded-[16px] font-bold text-[13px] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
             >
               <span>Alur Belajar</span>
               <svg
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </Link>
           </div>
 
-          {/* Section Rekapitulasi Nilai & Evaluasi Proyek Niti */}
-          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_4px_0px_#00000020] border border-[#D3D8C3]/50 flex flex-col gap-5">
+          {/* Section Rekapitulasi Nilai & Evaluasi Proyek Niti (Tanpa Icon Pena) */}
+          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-5 sm:p-6 shadow-[0px_2px_4px_0px_#00000015] border border-[#D3D8C3]/60 flex flex-col gap-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#3D4127]/10 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-[10px] bg-[#636B2F]/10 flex items-center justify-center text-[#636B2F]">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-[18px] font-bold text-[#3D4127]">
-                    Nilai & Evaluasi Proyek Niti
-                  </h2>
-                  <p className="text-[12px] text-[#3D4127]/60">
-                    Hasil penilaian dan umpan balik dari Guru pembimbing
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-[17px] sm:text-[18px] font-bold text-[#3D4127]">
+                  Nilai & Evaluasi Proyek Niti
+                </h2>
+                <p className="text-[12px] text-[#3D4127]/60">
+                  Hasil penilaian dan umpan balik dari Guru pembimbing
+                </p>
               </div>
 
               {avgNilai !== null ? (
-                <div className="flex items-center gap-2 bg-[#636B2F]/10 border border-[#636B2F]/30 px-3.5 py-1.5 rounded-full">
+                <div className="flex items-center gap-2 bg-[#636B2F]/15 border border-[#636B2F]/30 px-3.5 py-1.5 rounded-full">
                   <span className="text-[12px] font-semibold text-[#3D4127]">
                     Rata-rata Nilai:
                   </span>
@@ -348,8 +340,8 @@ export default function ProfilSiswaPage() {
               )}
             </div>
 
-            {/* List Kartu Nilai 5 Tahap */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {/* List Kartu Nilai 5 Tahap (Tanpa Efek Hover Border) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
               {penilaianList.map((item, idx) => {
                 const isApproved =
                   item.status === "disetujui" || (item.nilai !== null && item.nilai >= 70);
@@ -357,7 +349,7 @@ export default function ProfilSiswaPage() {
                 return (
                   <div
                     key={item.tahap}
-                    className="bg-[#EDF0E8]/40 border border-[#D3D8C3]/60 rounded-[18px] p-4 flex flex-col justify-between gap-3 hover:border-[#636B2F]/40 transition-colors"
+                    className="bg-[#EDF0E8]/50 border border-[#D3D8C3] rounded-[18px] p-4 flex flex-col justify-between gap-3"
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
@@ -367,9 +359,9 @@ export default function ProfilSiswaPage() {
                         <span
                           className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                             isApproved
-                              ? "bg-[#16a34a]/15 text-[#15803d]"
+                              ? "bg-[#636B2F]/20 text-[#3D4127]"
                               : item.status === "menunggu_review"
-                              ? "bg-[#d97706]/15 text-[#b45309]"
+                              ? "bg-[#636B2F]/10 text-[#636B2F]"
                               : "bg-[#9CA08D]/15 text-[#9CA08D]"
                           }`}
                         >
@@ -384,13 +376,13 @@ export default function ProfilSiswaPage() {
                       <h4 className="text-[15px] font-bold text-[#3D4127]">
                         {item.nama}
                       </h4>
-                      <p className="text-[11px] text-[#3D4127]/60 line-clamp-2">
+                      <p className="text-[11px] text-[#3D4127]/65 line-clamp-2">
                         {item.deskripsi}
                       </p>
                     </div>
 
                     {/* Nilai & Catatan Guru */}
-                    <div className="pt-2 border-t border-[#D3D8C3]/50 flex flex-col gap-1.5">
+                    <div className="pt-2 border-t border-[#D3D8C3]/60 flex flex-col gap-1.5">
                       <div className="flex items-baseline justify-between">
                         <span className="text-[12px] font-semibold text-[#3D4127]/70">
                           Nilai:
@@ -410,7 +402,7 @@ export default function ProfilSiswaPage() {
                       </div>
 
                       {item.catatan && item.catatan !== "-" && (
-                        <div className="bg-[#FBFFF3] p-2 rounded-lg border border-[#D3D8C3]/40 text-[11px] text-[#3D4127]">
+                        <div className="bg-[#FBFFF3] p-2.5 rounded-xl border border-[#D3D8C3]/50 text-[11px] text-[#3D4127]">
                           <strong className="text-[#636B2F]">Catatan: </strong>
                           {item.catatan}
                         </div>
@@ -433,113 +425,156 @@ export default function ProfilSiswaPage() {
             </div>
           </div>
 
-          {/* Stat Cards Grid: Rekap Kehadiran */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
-            {/* Total Persentase Hadir */}
-            <div className="col-span-2 sm:col-span-1 bg-[#FBFFF3] rounded-[20px] p-4 shadow-sm border border-[#D3D8C3]/50 flex flex-col justify-between">
-              <span className="text-[12px] font-semibold text-[#3D4127]/70">
-                Kehadiran
-              </span>
-              <div className="mt-2">
-                <span className="text-[28px] font-black text-[#636B2F]">
+          {/* Section 1: Ringkasan Kehadiran Eksekutif (All-in-One Industry Standard Card) */}
+          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-5 sm:p-6 shadow-[0px_2px_4px_0px_#00000015] border border-[#D3D8C3]/60 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#3D4127]/10 flex-wrap gap-2">
+              <div>
+                <h2 className="text-[17px] sm:text-[18px] font-bold text-[#3D4127]">
+                  Ringkasan Kehadiran
+                </h2>
+              </div>
+
+              {/* Badge Persentase */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#636B2F]/15 border border-[#636B2F]/30 text-[#3D4127]">
+                <span className="w-2 h-2 rounded-full bg-[#636B2F]" />
+                <span className="text-[14px] font-black text-[#636B2F]">
                   {stats.persentase}%
                 </span>
-                <p className="text-[11px] font-medium text-[#3D4127]/60">
-                  {stats.hadir} dari {stats.total} pertemuan
-                </p>
+                <span className="text-[11px] font-semibold text-[#3D4127]/70">
+                  Presensi
+                </span>
               </div>
             </div>
 
-            {/* Hadir Card */}
-            <div className="bg-[#FBFFF3] rounded-[20px] p-4 shadow-sm border border-[#D3D8C3]/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-[#15803d]">Hadir</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#16a34a]" />
+            {/* Visual Progress Bar Presensi */}
+            <div className="flex flex-col gap-2 bg-[#EDF0E8]/50 p-3.5 rounded-[18px] border border-[#D3D8C3]/50">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="font-medium text-[#3D4127]/75">
+                  Kehadiran Terpenuhi
+                </span>
+                <span className="font-bold text-[#3D4127]">
+                  <strong className="text-[#636B2F]">{stats.hadir}</strong> dari {stats.total} sesi pertemuan
+                </span>
               </div>
-              <span className="text-[26px] font-extrabold text-[#15803d] mt-2">
-                {stats.hadir}
-              </span>
+              <div className="w-full h-2.5 bg-[#D3D8C3]/50 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#5B6628] to-[#636B2F] rounded-full transition-all duration-500"
+                  style={{ width: `${stats.total > 0 ? stats.persentase : 0}%` }}
+                />
+              </div>
             </div>
 
-            {/* Sakit Card */}
-            <div className="bg-[#FBFFF3] rounded-[20px] p-4 shadow-sm border border-[#D3D8C3]/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-[#0369a1]">Sakit</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]" />
+            {/* 4 Kolom Metrik Presensi Terpadu */}
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 pt-1">
+              {/* Hadir */}
+              <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[#636B2F]">
+                  <span>✓</span>
+                  <span>Hadir</span>
+                </div>
+                <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
+                  {stats.hadir}
+                </span>
               </div>
-              <span className="text-[26px] font-extrabold text-[#0369a1] mt-2">
-                {stats.sakit}
-              </span>
-            </div>
 
-            {/* Izin Card */}
-            <div className="bg-[#FBFFF3] rounded-[20px] p-4 shadow-sm border border-[#D3D8C3]/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-[#b45309]">Izin</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#d97706]" />
+              {/* Sakit */}
+              <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[#3D4127]/70">
+                  <span>✚</span>
+                  <span>Sakit</span>
+                </div>
+                <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
+                  {stats.sakit}
+                </span>
               </div>
-              <span className="text-[26px] font-extrabold text-[#b45309] mt-2">
-                {stats.izin}
-              </span>
-            </div>
 
-            {/* Alpa Card */}
-            <div className="bg-[#FBFFF3] rounded-[20px] p-4 shadow-sm border border-[#D3D8C3]/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-[#b91c1c]">Alpa</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" />
+              {/* Izin */}
+              <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[#3D4127]/70">
+                  <span>✉</span>
+                  <span>Izin</span>
+                </div>
+                <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
+                  {stats.izin}
+                </span>
               </div>
-              <span className="text-[26px] font-extrabold text-[#b91c1c] mt-2">
-                {stats.alpa}
-              </span>
+
+              {/* Alpa */}
+              <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[#3D4127]/70">
+                  <span>✕</span>
+                  <span>Alpa</span>
+                </div>
+                <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
+                  {stats.alpa}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Section Detail Riwayat Absensi */}
-          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-6 shadow-[0px_2px_4px_0px_#00000020] border border-[#D3D8C3]/50 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#3D4127]/10 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-[10px] bg-[#636B2F]/10 flex items-center justify-center text-[#636B2F]">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </div>
-                <h2 className="text-[18px] font-bold text-[#3D4127]">
-                  Riwayat Kehadiran Siswa
+          {/* Section 2: Detail Riwayat Presensi (Responsive Mobile-First List & Desktop Table) */}
+          <div className="w-full bg-[#FBFFF3] rounded-[24px] p-5 sm:p-6 shadow-[0px_2px_4px_0px_#00000015] border border-[#D3D8C3]/60 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#3D4127]/10 gap-3">
+              <div>
+                <h2 className="text-[17px] sm:text-[18px] font-bold text-[#3D4127]">
+                  Riwayat Pertemuan
                 </h2>
+                
               </div>
-              <span className="text-[13px] font-semibold text-[#3D4127]/60">
-                Total Tercatat: {attendanceRecords.length} Pertemuan
-              </span>
+
+              {/* Filter Tabs Interaktif */}
+              <div className="flex items-center gap-1.5 p-1 rounded-[14px] bg-[#EDF0E8] border border-[#D3D8C3]/60 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setFilterAbsensi("semua")}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${
+                    filterAbsensi === "semua"
+                      ? "bg-[#636B2F] text-white shadow-xs"
+                      : "text-[#3D4127]/70 hover:text-[#3D4127]"
+                  }`}
+                >
+                  Semua ({attendanceRecords.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterAbsensi("hadir")}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${
+                    filterAbsensi === "hadir"
+                      ? "bg-[#636B2F] text-white shadow-xs"
+                      : "text-[#3D4127]/70 hover:text-[#3D4127]"
+                  }`}
+                >
+                  Hadir ({stats.hadir})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterAbsensi("absen")}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${
+                    filterAbsensi === "absen"
+                      ? "bg-[#636B2F] text-white shadow-xs"
+                      : "text-[#3D4127]/70 hover:text-[#3D4127]"
+                  }`}
+                >
+                  Absen ({stats.sakit + stats.izin + stats.alpa})
+                </button>
+              </div>
             </div>
 
             {/* Loading state */}
             {isLoading && (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#3D4127]/60">
                 <div className="w-8 h-8 border-3 border-[#636B2F]/20 border-t-[#636B2F] rounded-full animate-spin" />
-                <span className="text-[13px]">Memuat riwayat kehadiran & nilai...</span>
+                <span className="text-[13px]">Memuat riwayat kehadiran...</span>
               </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty state: Belum ada data sama sekali */}
             {!isLoading && attendanceRecords.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+              <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-[#EDF0E8] flex items-center justify-center text-[#636B2F]">
                   <svg
-                    width="26"
-                    height="26"
+                    width="28"
+                    height="28"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -553,52 +588,111 @@ export default function ProfilSiswaPage() {
                     <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h3 className="text-[16px] font-bold text-[#3D4127]">
+                <h3 className="text-[15px] font-bold text-[#3D4127]">
                   Belum Ada Data Kehadiran
                 </h3>
-                <p className="text-[13px] text-[#3D4127]/70 max-w-[360px]">
-                  Catatan kehadiran Anda akan otomatis tampil di sini setelah guru
-                  melakukan absensi kelas.
+                <p className="text-[12px] text-[#3D4127]/70 max-w-[340px]">
+                  Catatan kehadiran Anda akan otomatis tampil di sini setelah guru melakukan absensi kelas.
                 </p>
               </div>
             )}
 
-            {/* Data Table */}
-            {!isLoading && attendanceRecords.length > 0 && (
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left text-[14px] text-[#3D4127]">
+            {/* Empty state: Hasil filter kosong */}
+            {!isLoading && attendanceRecords.length > 0 && filteredRecords.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+                <p className="text-[14px] font-bold text-[#3D4127]">
+                  Tidak ada data untuk filter ini
+                </p>
+                <p className="text-[12px] text-[#3D4127]/60">
+                  Silakan pilih filter "Semua" untuk melihat seluruh sesi pertemuan.
+                </p>
+              </div>
+            )}
+
+            {/* 1. Mobile View (Card Timeline List yang Nyaman dan Rapi di HP) */}
+            {!isLoading && filteredRecords.length > 0 && (
+              <div className="flex flex-col gap-2.5 sm:hidden">
+                {filteredRecords.map((item, idx) => {
+                  const { day, month } = getDayAndMonth(item.tanggal);
+                  const cfg = statusConfig[item.status] || statusConfig.hadir;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-[#EDF0E8]/60 border border-[#D3D8C3] rounded-[18px] p-3.5 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Kalender Badge */}
+                        <div className="w-11 h-11 rounded-[12px] bg-[#FBFFF3] border border-[#D3D8C3] flex flex-col items-center justify-center text-center flex-shrink-0 shadow-2xs">
+                          <span className="text-[9px] uppercase font-bold text-[#636B2F] leading-none">
+                            {month}
+                          </span>
+                          <span className="text-[15px] font-black text-[#3D4127] leading-tight">
+                            {day}
+                          </span>
+                        </div>
+
+                        {/* Info Tanggal & Pertemuan */}
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-bold text-[#3D4127] truncate">
+                            {formatTanggalIndonesia(item.tanggal)}
+                          </span>
+                          <span className="text-[11px] text-[#3D4127]/65">
+                            Pertemuan #{attendanceRecords.length - idx} • {profile?.kelas ? `Kelas ${profile.kelas}` : "-"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status Pill */}
+                      <div className="flex-shrink-0">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${cfg.badgeClass}`}
+                        >
+                          <span>{cfg.icon}</span>
+                          <span>{cfg.label}</span>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 2. Desktop / Tablet View (Table Berstruktur Lengkap) */}
+            {!isLoading && filteredRecords.length > 0 && (
+              <div className="hidden sm:block w-full overflow-x-auto">
+                <table className="w-full text-left text-[13px] text-[#3D4127]">
                   <thead>
-                    <tr className="border-b border-[#D3D8C3] text-[12px] font-bold text-[#3D4127]/60 uppercase tracking-wider">
-                      <th className="py-3 px-3 w-12 text-center">No</th>
-                      <th className="py-3 px-3">Hari & Tanggal</th>
-                      <th className="py-3 px-3">Kelas</th>
-                      <th className="py-3 px-3">Status</th>
-                      <th className="py-3 px-3 text-right">Keterangan</th>
+                    <tr className="border-b border-[#D3D8C3] text-[11px] font-bold text-[#3D4127]/60 uppercase tracking-wider">
+                      <th className="py-2.5 px-3 w-12 text-center">Sesi</th>
+                      <th className="py-2.5 px-3">Hari & Tanggal</th>
+                      <th className="py-2.5 px-3">Kelas</th>
+                      <th className="py-2.5 px-3 text-center">Status Kehadiran</th>
+                      <th className="py-2.5 px-3 text-right">Keterangan</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#EDF0E8]">
-                    {attendanceRecords.map((item, idx) => {
-                      const cfg =
-                        statusConfig[item.status] || statusConfig.hadir;
+                    {filteredRecords.map((item, idx) => {
+                      const cfg = statusConfig[item.status] || statusConfig.hadir;
                       return (
                         <tr
                           key={item.id}
                           className="hover:bg-[#EDF0E8]/50 transition-colors"
                         >
                           <td className="py-3 px-3 font-semibold text-[#3D4127]/60 text-center">
-                            {idx + 1}
+                            #{attendanceRecords.length - idx}
                           </td>
                           <td className="py-3 px-3 font-bold text-[#3D4127]">
                             {formatTanggalIndonesia(item.tanggal)}
                           </td>
                           <td className="py-3 px-3">
-                            <span className="px-2.5 py-0.5 rounded-md bg-[#3D4127]/10 text-[12px] font-bold text-[#3D4127]">
+                            <span className="px-2.5 py-1 rounded-md bg-[#3D4127]/10 text-[11px] font-bold text-[#3D4127]">
                               {profile?.kelas ? `Kelas ${profile.kelas}` : "-"}
                             </span>
                           </td>
-                          <td className="py-3 px-3">
+                          <td className="py-3 px-3 text-center">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold ${cfg.badgeClass}`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${cfg.badgeClass}`}
                             >
                               <span>{cfg.icon}</span>
                               <span>{cfg.label}</span>
@@ -615,8 +709,8 @@ export default function ProfilSiswaPage() {
               </div>
             )}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </SiswaGuard>
   );
 }

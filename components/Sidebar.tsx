@@ -48,7 +48,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         {/* Header Sidebar */}
         <div className="flex justify-between items-center mb-8">
-          <span
+          <Link
+            href="/"
+            onClick={onClose}
+            className="hover:opacity-80 transition-opacity cursor-pointer"
             style={{
               fontFamily: "Inter, sans-serif",
               fontWeight: 700,
@@ -58,7 +61,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             }}
           >
             UA-EVAA
-          </span>
+          </Link>
           <button
             onClick={onClose}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#D3D8C3] transition-colors cursor-pointer"
@@ -320,7 +323,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Link
                     href="/profil-siswa"
                     onClick={onClose}
-                    className="w-full py-2 bg-[#5B6628]/10 hover:bg-[#5B6628]/20 text-[#5B6628] text-[13px] font-bold rounded-[14px] transition-colors flex items-center justify-center gap-2 cursor-pointer select-none"
+                    className="w-full py-2.5 bg-[#5B6628]/10 hover:bg-[#5B6628]/20 text-[#5B6628] text-[13px] font-bold rounded-[14px] transition-colors flex items-center justify-center gap-2 cursor-pointer select-none"
                   >
                     <svg
                       width="16"
@@ -332,12 +335,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
                     </svg>
-                    <span>Kehadiranku</span>
+                    <span>Profil & Nilai Siswa</span>
                   </Link>
                 )}
                 <button
