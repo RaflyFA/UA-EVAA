@@ -72,45 +72,6 @@ export default function GuruManajemenModulPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-[20px] font-bold text-[#3D4127]">Alur Modul</h1>
         </div>
-
-        <div className="flex items-center gap-4">
-          {/* Tombol Salin Link */}
-          <button
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                navigator.clipboard.writeText(window.location.href);
-                setToast({
-                  show: true,
-                  message: "Tautan halaman modul berhasil disalin!",
-                  type: "success",
-                });
-              }
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 text-[#3D4127] transition-colors cursor-pointer"
-          >
-            <Image
-              src="/guru/salinlink.svg"
-              alt="Salin Link"
-              width={18}
-              height={18}
-              className="object-contain"
-            />
-            <span className="text-[14px] font-semibold text-[#3D4127]">
-              Salin Link
-            </span>
-          </button>
-
-          {/* Tombol Opsi Titik 3 */}
-          <button className="p-1.5 rounded-lg hover:bg-black/5 text-[#3D4127] transition-colors">
-            <Image
-              src="/guru/icon titik 3.svg"
-              alt="Opsi"
-              width={20}
-              height={20}
-              className="object-contain"
-            />
-          </button>
-        </div>
       </div>
 
       {/* Grid Alur Modul Cards */}

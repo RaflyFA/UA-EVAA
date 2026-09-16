@@ -721,7 +721,7 @@ export default function GuruSiswaPenilaianPage() {
                           title="Klik untuk melihat nomor / memperbarui berkas sertifikat"
                           className="px-2.5 py-1 rounded-[10px] bg-[#636B2F]/15 hover:bg-[#636B2F]/25 text-[#636B2F] text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-[#636B2F]/30"
                         >
-                          <span>✓ Terbit</span>
+                          <span>Terbit</span>
                         </button>
                         {cert.url_file && (
                           <button
@@ -1097,7 +1097,7 @@ export default function GuruSiswaPenilaianPage() {
 
             {/* Info Box */}
             <div className="p-3.5 rounded-[16px] bg-[#636B2F]/10 border border-[#636B2F]/25 text-[12.5px] text-[#3D4127] leading-relaxed">
-              💡 Guru dapat memberikan kata sandi baru untuk siswa yang lupa kata sandi. Beritahukan kata sandi baru ini kepada siswa bersangkutan setelah berhasil disimpan.
+              Guru dapat memberikan kata sandi baru untuk siswa yang lupa kata sandi. Beritahukan kata sandi baru ini kepada siswa bersangkutan setelah berhasil disimpan.
             </div>
 
             {/* Form */}

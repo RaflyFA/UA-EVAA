@@ -366,7 +366,7 @@ export default function ProfilSiswaPage() {
                           }`}
                         >
                           {isApproved
-                            ? "✓ Tuntas"
+                            ? "Tuntas"
                             : item.status === "menunggu_review"
                             ? "Review"
                             : "Proses"}

@@ -504,15 +504,7 @@ export default function GuruProjectPage() {
         {/* Empty State */}
         {!isLoading && filteredSubmissions.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center py-20 gap-2 text-center text-[#3D4127]">
-            <div className="w-16 h-16 rounded-full bg-[#EDF0E8] flex items-center justify-center mb-2">
-              <Image
-                src="/guru/project aktif.svg"
-                alt="Empty"
-                width={32}
-                height={32}
-                className="opacity-40"
-              />
-            </div>
+            
             <h4 className="font-semibold text-[16px]">Belum Ada Pengajuan Proyek</h4>
             <p className="text-[14px] text-[#3D4127]/60 max-w-[400px]">
               {searchQuery || selectedKelas !== "Semua Kelas" || selectedTahap !== "Semua Tahap"

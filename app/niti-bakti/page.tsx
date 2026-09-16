@@ -43,14 +43,22 @@ export default function NitiBaktiPage() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const checkScroll = () => {
     if (categoryScrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
     }
   };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, []);
   const [panduan, setPanduan] = useState<string>(
     "Pilihlah salah satu dari 3 kategori aksi lingkungan (Daur Ulang Sampah, Menanam Pohon, atau Gerakan Hemat Energi). Laksanakan aksi tersebut bersama kelompok, dokumentasikan, lalu unggah laporan PDF bukti aksi Anda."
   );
@@ -521,6 +529,32 @@ export default function NitiBaktiPage() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Indikator Bayangan & Panah Penunjuk Scroll Kiri */}
+            <div
+              onClick={() => {
+                categoryScrollRef.current?.scrollBy({ left: -140, behavior: "smooth" });
+              }}
+              className={`absolute left-0 top-0 bottom-2 w-12 bg-gradient-to-r from-[#FBFFF3] via-[#FBFFF3]/80 to-transparent flex items-center justify-start pl-0.5 cursor-pointer transition-opacity duration-300 ${
+                canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+              title="Geser ke kiri"
+            >
+              <div className="w-6 h-6 rounded-full bg-white/95 shadow-md border border-[#3D4127]/15 flex items-center justify-center text-[#3D4127] hover:scale-105 active:scale-95 transition-transform">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </div>
             </div>
 
             {/* Indikator Bayangan & Panah Penunjuk Scroll Kanan */}

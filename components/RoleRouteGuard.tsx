@@ -22,10 +22,9 @@ export default function RoleRouteGuard({
     // 1. Otorisasi Akun Guru
     if (user && effectiveRole === "guru") {
       const isGuruPath = pathname.startsWith("/guru");
-      const isAuthExempt = pathname === "/reset-password";
 
       // Guru DILARANG mengakses halaman siswa (Beranda, Alur, Modul, dll.)
-      if (!isGuruPath && !isAuthExempt) {
+      if (!isGuruPath) {
         router.replace("/guru/manajemen-modul");
       }
     }
@@ -44,8 +43,7 @@ export default function RoleRouteGuard({
     !loading &&
     user &&
     effectiveRole === "guru" &&
-    !pathname.startsWith("/guru") &&
-    pathname !== "/reset-password"
+    !pathname.startsWith("/guru")
   ) {
     return (
       <div className="min-h-screen w-full bg-[#EDF0E8] flex flex-col items-center justify-center p-6 font-sans">

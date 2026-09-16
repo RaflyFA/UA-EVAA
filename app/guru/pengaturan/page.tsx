@@ -106,6 +106,14 @@ export default function GuruPengaturanPage() {
       return;
     }
 
+    if (!cleanEmail.endsWith("@gmail.com")) {
+      setNotification({
+        type: "error",
+        message: "Email guru wajib menggunakan domain @gmail.com.",
+      });
+      return;
+    }
+
     setIsUpdatingEmail(true);
     try {
       const { error } = await supabase.auth.updateUser({
@@ -266,7 +274,7 @@ export default function GuruPengaturanPage() {
                 type="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value.toLowerCase())}
-                placeholder="alamat.email@sekolah.id"
+                placeholder="alamat.email@gmail.com"
                 className="w-full h-[46px] bg-white border border-[#D3D8C3] rounded-[12px] px-4 text-[14px] text-[#3D4127] placeholder-[#3D4127]/40 focus:outline-none focus:border-[#5B6628]"
                 required
               />

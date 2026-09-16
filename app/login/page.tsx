@@ -36,10 +36,52 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  // Helper untuk format email jika user mengetik username
-  const formatEmail = (val: string) => {
+  // Helper untuk memproses input email atau username
+  // Aturan:
+  // 1. Jika mengandung '@': WAJIB menggunakan domain '@gmail.com'
+  // 2. Jika tidak mengandung '@': Dianggap username, diubah menjadi huruf kecil semua, dan menggunakan domain bayangan '@evaa.id'
+  const resolveEmailOrUsername = (
+    val: string
+  ): { email: string | null; error?: string } => {
     const trimmed = val.trim().toLowerCase();
-    return trimmed.includes("@") ? trimmed : `${trimmed}@sekolah.id`;
+    if (!trimmed) {
+      return { email: null, error: "Email atau Username tidak boleh kosong." };
+    }
+
+    if (trimmed.includes("@")) {
+      if (!trimmed.endsWith("@gmail.com")) {
+        return {
+          email: null,
+          error: "Email wajib menggunakan domain @gmail.com.",
+        };
+      }
+      const localPart = trimmed.slice(0, -10); // hapus '@gmail.com'
+      if (!localPart || localPart.includes(" ") || localPart.length < 3) {
+        return {
+          email: null,
+          error:
+            "Format email @gmail.com tidak valid (minimal 3 karakter sebelum @gmail.com).",
+        };
+      }
+      return { email: trimmed };
+    } else {
+      // Username tanpa '@'
+      const cleanUsername = trimmed.replace(/\s+/g, "");
+      if (cleanUsername.length < 3) {
+        return {
+          email: null,
+          error: "Username minimal 3 karakter tanpa spasi.",
+        };
+      }
+      if (!/^[a-z0-9._]+$/.test(cleanUsername)) {
+        return {
+          email: null,
+          error:
+            "Username hanya boleh berupa huruf kecil, angka, titik (.), dan garis bawah (_).",
+        };
+      }
+      return { email: `${cleanUsername}@evaa.id` };
+    }
   };
 
   // 1. Handle Submit Login
@@ -49,7 +91,26 @@ function LoginForm() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const email = formatEmail(emailOrUsername);
+    if (!emailOrUsername.trim()) {
+      setErrorMessage("Email atau Username wajib diisi.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage("Kata sandi wajib diisi.");
+      setIsLoading(false);
+      return;
+    }
+
+    const resolved = resolveEmailOrUsername(emailOrUsername);
+    if (resolved.error || !resolved.email) {
+      setErrorMessage(resolved.error || "Format email atau username tidak valid.");
+      setIsLoading(false);
+      return;
+    }
+
+    const email = resolved.email;
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -99,8 +160,21 @@ function LoginForm() {
     setIsLoading(true);
     setErrorMessage(null);
 
-    if (password.length < 8) {
-      setErrorMessage("Kata sandi minimal 8 karakter.");
+    if (!namaLengkap.trim()) {
+      setErrorMessage("Nama Lengkap wajib diisi.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!emailOrUsername.trim()) {
+      setErrorMessage("Email atau Username wajib diisi.");
+      setIsLoading(false);
+      return;
+    }
+
+    const resolved = resolveEmailOrUsername(emailOrUsername);
+    if (resolved.error || !resolved.email) {
+      setErrorMessage(resolved.error || "Format email atau username tidak valid.");
       setIsLoading(false);
       return;
     }
@@ -117,7 +191,21 @@ function LoginForm() {
       }
     }
 
-    const email = formatEmail(emailOrUsername);
+    if (!password) {
+      setErrorMessage("Kata sandi wajib diisi.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 8) {
+      setErrorMessage(
+        `Kata sandi minimal 8 karakter (saat ini baru ${password.length} karakter).`
+      );
+      setIsLoading(false);
+      return;
+    }
+
+    const email = resolved.email;
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -125,7 +213,10 @@ function LoginForm() {
         password,
         options: {
           data: {
-            nama_lengkap: namaLengkap,
+            nama_lengkap: namaLengkap.trim(),
+            username: !emailOrUsername.trim().includes("@")
+              ? emailOrUsername.trim().toLowerCase().replace(/\s+/g, "")
+              : emailOrUsername.trim().toLowerCase().split("@")[0],
             role: registerRole,
             kelas: registerRole === "siswa" ? kelas : null,
             nomor_induk: nomorInduk || null,
@@ -258,7 +349,7 @@ function LoginForm() {
 
         {/* 1. FORM LOGIN */}
         {mode === "login" && (
-          <form onSubmit={handleLogin} className="w-full flex flex-col gap-[14px]">
+          <form onSubmit={handleLogin} noValidate className="w-full flex flex-col gap-[14px]">
             {/* Input Email / Username */}
             <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#FBFFF340] rounded-[16px] px-[16px] flex items-center gap-[14px] focus-within:border-white focus-within:bg-[#FBFFF340] transition-colors">
               <Image
@@ -271,10 +362,12 @@ function LoginForm() {
               <input
                 type="text"
                 value={emailOrUsername}
-                onChange={(e) => setEmailOrUsername(e.target.value.toLowerCase())}
+                onChange={(e) => {
+                  setEmailOrUsername(e.target.value.toLowerCase());
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 placeholder="Email atau Username"
                 className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
-                required
               />
             </div>
 
@@ -290,10 +383,12 @@ function LoginForm() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 placeholder="Kata Sandi"
                 className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
-                required
               />
             </div>
 
@@ -349,16 +444,18 @@ function LoginForm() {
 
         {/* 2. FORM REGISTER */}
         {mode === "register" && (
-          <form onSubmit={handleRegister} className="w-full flex flex-col gap-[14px]">
+          <form onSubmit={handleRegister} noValidate className="w-full flex flex-col gap-[14px]">
             {/* Input Nama Lengkap */}
             <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#FBFFF340] rounded-[16px] px-[16px] flex items-center gap-[14px]">
               <input
                 type="text"
                 value={namaLengkap}
-                onChange={(e) => setNamaLengkap(e.target.value)}
+                onChange={(e) => {
+                  setNamaLengkap(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 placeholder="Nama Lengkap"
                 className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
-                required
               />
             </div>
 
@@ -478,15 +575,37 @@ function LoginForm() {
             </div>
 
             {/* Input Email / Username */}
-            <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#FBFFF340] rounded-[16px] px-[16px] flex items-center gap-[14px]">
-              <input
-                type="text"
-                value={emailOrUsername}
-                onChange={(e) => setEmailOrUsername(e.target.value.toLowerCase())}
-                placeholder="Email (cth: ahmad@sekolah.id)"
-                className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
-                required
-              />
+            <div className="w-full flex flex-col gap-1.5">
+              <div
+                className={`w-full h-[52px] bg-[#FBFFF330] border rounded-[16px] px-[16px] flex items-center gap-[14px] transition-colors ${
+                  emailOrUsername.includes("@") &&
+                  !emailOrUsername.endsWith("@gmail.com") &&
+                  emailOrUsername.length > 3
+                    ? "border-[#f87171] bg-[#f87171]/15"
+                    : emailOrUsername.includes("@") &&
+                      emailOrUsername.endsWith("@gmail.com")
+                    ? "border-[#4ade80] bg-[#4ade80]/15"
+                    : "border-[#FBFFF340]"
+                }`}
+              >
+                <input
+                  type="text"
+                  value={emailOrUsername}
+                  onChange={(e) => {
+                    setEmailOrUsername(e.target.value.toLowerCase());
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  placeholder="Email atau Username"
+                  className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
+                />
+              </div>
+              {emailOrUsername.includes("@") &&
+                !emailOrUsername.endsWith("@gmail.com") &&
+                emailOrUsername.length > 3 && (
+                  <span className="text-[12px] text-[#fca5a5] px-1 font-medium flex items-center gap-1.5">
+                    Jika menggunakan email, wajib berakhiran @gmail.com
+                  </span>
+                )}
             </div>
 
             {/* Detail Tambahan: Kelas & NISN untuk Siswa, NIP untuk Guru */}
@@ -521,10 +640,12 @@ function LoginForm() {
                   <input
                     type="password"
                     value={teacherPin}
-                    onChange={(e) => setTeacherPin(e.target.value)}
+                    onChange={(e) => {
+                      setTeacherPin(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
                     placeholder="Sandi Khusus Pengajar"
                     className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/60 text-[14px] font-[500] focus:outline-none"
-                    required
                   />
                 </div>
                 <span className="text-[11px] text-[#FBFFF3]/80 px-1 font-medium">
@@ -534,16 +655,39 @@ function LoginForm() {
             )}
 
             {/* Input Kata Sandi */}
-            <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#FBFFF340] rounded-[16px] px-[16px] flex items-center gap-[14px]">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Kata Sandi Minimal 8 Karakter"
-                className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
-                required
-                minLength={8}
-              />
+            <div className="w-full flex flex-col gap-1.5">
+              <div
+                className={`w-full h-[52px] bg-[#FBFFF330] border rounded-[16px] px-[16px] flex items-center gap-[14px] transition-colors ${
+                  password.length > 0 && password.length < 8
+                    ? "border-[#f87171] bg-[#f87171]/15"
+                    : password.length >= 8
+                    ? "border-[#4ade80] bg-[#4ade80]/15"
+                    : "border-[#FBFFF340]"
+                }`}
+              >
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  placeholder="Kata Sandi Minimal 8 Karakter"
+                  className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
+                />
+              </div>
+
+              {/* Indikator UI langsung di bawah input kata sandi */}
+              {password.length > 0 && password.length < 8 && (
+                <span className="text-[12px] text-[#fca5a5] px-1 font-medium flex items-center gap-1.5">
+                  Kata sandi minimal 8 karakter (saat ini {password.length} karakter)
+                </span>
+              )}
+              {password.length >= 8 && (
+                <span className="text-[12px] text-[#86efac] px-1 font-medium flex items-center gap-1.5">
+                  Kata sandi memenuhi syarat ({password.length} karakter)
+                </span>
+              )}
             </div>
 
             {/* Tombol Aksi: Kembali ke Beranda (Icon) & Daftarkan Akun */}
