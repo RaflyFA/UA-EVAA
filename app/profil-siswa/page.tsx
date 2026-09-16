@@ -35,22 +35,18 @@ const statusConfig: Record<
   hadir: {
     label: "Hadir",
     badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
-    icon: "✓",
   },
   sakit: {
     label: "Sakit",
     badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
-    icon: "✚",
   },
   izin: {
     label: "Izin",
     badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
-    icon: "✉",
   },
   alpa: {
     label: "Alpa",
     badgeClass: "bg-[#636B2F]/15 text-[#3D4127] border border-[#636B2F]/30",
-    icon: "✕",
   },
 };
 
@@ -357,19 +353,18 @@ export default function ProfilSiswaPage() {
                           Tahap {idx + 1}
                         </span>
                         <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                            isApproved
-                              ? "bg-[#636B2F]/20 text-[#3D4127]"
-                              : item.status === "menunggu_review"
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isApproved
+                            ? "bg-[#636B2F]/20 text-[#3D4127]"
+                            : item.status === "menunggu_review"
                               ? "bg-[#636B2F]/10 text-[#636B2F]"
                               : "bg-[#9CA08D]/15 text-[#9CA08D]"
-                          }`}
+                            }`}
                         >
                           {isApproved
                             ? "Tuntas"
                             : item.status === "menunggu_review"
-                            ? "Review"
-                            : "Proses"}
+                              ? "Review"
+                              : "Proses"}
                         </span>
                       </div>
 
@@ -469,7 +464,6 @@ export default function ProfilSiswaPage() {
               {/* Hadir */}
               <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
                 <div className="flex items-center gap-1 text-[11px] font-bold text-[#636B2F]">
-                  <span>✓</span>
                   <span>Hadir</span>
                 </div>
                 <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
@@ -480,7 +474,6 @@ export default function ProfilSiswaPage() {
               {/* Sakit */}
               <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
                 <div className="flex items-center gap-1 text-[11px] font-bold text-[#3D4127]/70">
-                  <span>✚</span>
                   <span>Sakit</span>
                 </div>
                 <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
@@ -491,7 +484,6 @@ export default function ProfilSiswaPage() {
               {/* Izin */}
               <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
                 <div className="flex items-center gap-1 text-[11px] font-bold text-[#3D4127]/70">
-                  <span>✉</span>
                   <span>Izin</span>
                 </div>
                 <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
@@ -502,7 +494,6 @@ export default function ProfilSiswaPage() {
               {/* Alpa */}
               <div className="flex flex-col items-center justify-center py-3 px-1 rounded-[16px] bg-[#EDF0E8]/60 border border-[#D3D8C3]/60 text-center">
                 <div className="flex items-center gap-1 text-[11px] font-bold text-[#3D4127]/70">
-                  <span>✕</span>
                   <span>Alpa</span>
                 </div>
                 <span className="text-[20px] sm:text-[24px] font-black text-[#3D4127] mt-0.5">
@@ -519,7 +510,7 @@ export default function ProfilSiswaPage() {
                 <h2 className="text-[17px] sm:text-[18px] font-bold text-[#3D4127]">
                   Riwayat Pertemuan
                 </h2>
-                
+
               </div>
 
               {/* Filter Tabs Interaktif */}
@@ -527,33 +518,30 @@ export default function ProfilSiswaPage() {
                 <button
                   type="button"
                   onClick={() => setFilterAbsensi("semua")}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${
-                    filterAbsensi === "semua"
-                      ? "bg-[#636B2F] text-white shadow-xs"
-                      : "text-[#3D4127]/70 hover:text-[#3D4127]"
-                  }`}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${filterAbsensi === "semua"
+                    ? "bg-[#636B2F] text-white shadow-xs"
+                    : "text-[#3D4127]/70 hover:text-[#3D4127]"
+                    }`}
                 >
                   Semua ({attendanceRecords.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterAbsensi("hadir")}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${
-                    filterAbsensi === "hadir"
-                      ? "bg-[#636B2F] text-white shadow-xs"
-                      : "text-[#3D4127]/70 hover:text-[#3D4127]"
-                  }`}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${filterAbsensi === "hadir"
+                    ? "bg-[#636B2F] text-white shadow-xs"
+                    : "text-[#3D4127]/70 hover:text-[#3D4127]"
+                    }`}
                 >
                   Hadir ({stats.hadir})
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterAbsensi("absen")}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${
-                    filterAbsensi === "absen"
-                      ? "bg-[#636B2F] text-white shadow-xs"
-                      : "text-[#3D4127]/70 hover:text-[#3D4127]"
-                  }`}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-[10px] transition-colors cursor-pointer ${filterAbsensi === "absen"
+                    ? "bg-[#636B2F] text-white shadow-xs"
+                    : "text-[#3D4127]/70 hover:text-[#3D4127]"
+                    }`}
                 >
                   Absen ({stats.sakit + stats.izin + stats.alpa})
                 </button>

@@ -591,18 +591,7 @@ export default function NitiBaktiPage() {
             <h2 className="text-[16px] font-[600] leading-[24px] text-[#3D4127]">
               Unggah Laporan
             </h2>
-            {profile ? (
-              <span className="text-[11px] font-semibold bg-[#5B6628]/15 text-[#5B6628] px-2 py-0.5 rounded-full truncate max-w-[140px]" title={profile.nama_lengkap}>
-                👤 {profile.nama_lengkap}
-              </span>
-            ) : (
-              <Link
-                href="/login"
-                className="text-[11px] font-bold text-[#b91c1c] underline bg-[#f87171]/15 px-2 py-0.5 rounded-full"
-              >
-                Belum Masuk ↗
-              </Link>
-            )}
+
           </div>
 
           {errorMessage && (
@@ -682,24 +671,7 @@ export default function NitiBaktiPage() {
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
-              ) : submissionStatus === "menunggu_review" ? (
-                /* Ikon Menunggu Review Guru */
-                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-[#ca8a04]/15 text-[#ca8a04] flex-shrink-0" title="Sedang Ditinjau Guru">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-              ) : (
+              ) : submissionStatus === "menunggu_review" ? null : (
                 /* Tombol Batal/Ganti Berkas X */
                 <button
                   onClick={handleCancel}
