@@ -11,7 +11,12 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "UA-EVAA",
-  description: "Aplikasi UA-EVAA",
+  description: "Aplikasi UA-EVAA - Modul IPA Digital",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

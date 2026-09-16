@@ -30,7 +30,7 @@ interface TahapPenilaianItem {
 
 const statusConfig: Record<
   AttendanceStatus,
-  { label: string; badgeClass: string; icon: string }
+  { label: string; badgeClass: string; icon?: string }
 > = {
   hadir: {
     label: "Hadir",
