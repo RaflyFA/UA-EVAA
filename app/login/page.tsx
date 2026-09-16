@@ -19,6 +19,10 @@ function LoginForm() {
   // State Forgot Password
   const [forgotEmail, setForgotEmail] = useState("");
   const [isForgotSent, setIsForgotSent] = useState(false);
+  const [forgotNotice, setForgotNotice] = useState<{
+    isSiswa: boolean;
+    message: string;
+  } | null>(null);
 
   // State Register
   const [namaLengkap, setNamaLengkap] = useState("");
@@ -161,26 +165,40 @@ function LoginForm() {
     }
   };
 
-  // 3. Handle Submit Lupa Password (Kirim Link Reset via Email)
+  // 3. Handle Submit Lupa Password (Kirim Link Reset via Email khusus Guru)
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
+    setForgotNotice(null);
+
+    const email = formatEmail(forgotEmail);
 
     try {
-      const origin =
-        typeof window !== "undefined" && window.location.origin
-          ? window.location.origin
-          : "http://localhost:3000";
-
-      await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-        redirectTo: `${origin}/reset-password`,
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok && !data.isSiswa) {
+        setErrorMessage(
+          data.error || "Gagal memproses permintaan pengaturan ulang kata sandi."
+        );
+      } else {
+        setForgotNotice({
+          isSiswa: !!data.isSiswa,
+          message:
+            data.message ||
+            "Jika email Anda terdaftar, instruksi pemulihan telah dikirim.",
+        });
+      }
     } catch (err: unknown) {
       console.error("Error saat meminta reset password:", err);
+      setErrorMessage("Terjadi kendala jaringan saat menghubungi server.");
     } finally {
-      // Selalu tampilkan pesan ambigu untuk melindungi privasi email pengguna
-      setIsForgotSent(true);
       setIsLoading(false);
     }
   };
@@ -631,26 +649,32 @@ function LoginForm() {
         {/* 3. FORM LUPA KATA SANDI */}
         {mode === "forgot" && (
           <div className="w-full flex flex-col gap-[14px]">
-            {isForgotSent ? (
+            {forgotNotice ? (
               <div className="w-full flex flex-col items-center text-center gap-4 py-2">
-                <div className="w-14 h-14 rounded-full bg-[#4ade80]/20 border border-[#4ade80] flex items-center justify-center text-2xl">
-                  ✉️
+                <div
+                  className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${
+                    forgotNotice.isSiswa
+                      ? "bg-[#eab308]/20 border border-[#eab308] text-[#fef08a]"
+                      : "bg-[#4ade80]/20 border border-[#4ade80] text-[#86efac]"
+                  }`}
+                >
+                  {forgotNotice.isSiswa ? "⚠️" : "✉️"}
                 </div>
                 <div className="flex flex-col gap-2">
                   <h3 className="text-[18px] font-bold text-[#FBFFF3]">
-                    Tautan Pemulihan Dikirim
+                    {forgotNotice.isSiswa
+                      ? "Khusus Akun Siswa"
+                      : "Tautan Pemulihan Dikirim"}
                   </h3>
-                  <p className="text-[13px] text-[#FBFFF3]/90 leading-relaxed">
-                    Jika email Anda terdaftar, kami telah mengirimkan tautan
-                    untuk mengatur ulang kata sandi. Silakan periksa kotak masuk
-                    atau folder spam email Anda.
+                  <p className="text-[13px] text-[#FBFFF3]/90 leading-relaxed px-1">
+                    {forgotNotice.message}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
                     setMode("login");
-                    setIsForgotSent(false);
+                    setForgotNotice(null);
                     setErrorMessage(null);
                   }}
                   className="w-full h-[52px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center font-[700] text-[#3D4127] text-[16px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer mt-2"

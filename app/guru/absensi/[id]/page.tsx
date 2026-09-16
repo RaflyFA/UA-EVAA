@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
+import ToastNotification from "@/components/ToastNotification";
 
 type AttendanceStatus = "hadir" | "sakit" | "izin" | "alpa";
 
@@ -244,7 +245,6 @@ export default function GuruDetailAbsensiPage() {
       });
     } finally {
       setIsSaving(false);
-      setTimeout(() => setSaveNotification(null), 5000);
     }
   };
 
@@ -315,24 +315,11 @@ export default function GuruDetailAbsensiPage() {
 
       {/* Notifikasi Toast */}
       {saveNotification && (
-        <div
-          className={`w-full max-w-[1158px] rounded-[12px] px-4 py-3 text-[14px] font-semibold flex items-center justify-between transition-all ${
-            saveNotification.type === "success"
-              ? "bg-[#636B2F]/15 border border-[#636B2F] text-[#3D4127]"
-              : "bg-[#dc2626]/15 border border-[#dc2626] text-[#b91c1c]"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span>{saveNotification.type === "success" ? "✓" : "⚠️"}</span>
-            <span>{saveNotification.message}</span>
-          </div>
-          <button
-            onClick={() => setSaveNotification(null)}
-            className="opacity-70 hover:opacity-100 font-bold px-1"
-          >
-            ✕
-          </button>
-        </div>
+        <ToastNotification
+          message={saveNotification.message}
+          type={saveNotification.type}
+          onClose={() => setSaveNotification(null)}
+        />
       )}
 
       {/* Kotak Info Sesi Absensi & Stat Cards */}
@@ -476,19 +463,11 @@ export default function GuruDetailAbsensiPage() {
                 key={siswa.id}
                 className="w-full min-h-[52px] px-[14px] py-2 flex items-center justify-between gap-[12px] text-[#3D4127] border-b border-[#EDF0E8] last:border-0 hover:bg-[#EDF0E8]/40 rounded-xl transition-colors flex-wrap"
               >
-                {/* Kolom Siswa: Nomor Urut + Avatar + Nama + NISN */}
+                {/* Kolom Siswa: Nomor Urut + Nama + NISN */}
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="w-5 text-[12px] font-semibold text-[#3D4127]/50 text-right">
                     {idx + 1}.
                   </span>
-                  <div className="w-9 h-9 rounded-full overflow-hidden relative flex-shrink-0 border border-[#3D4127]/10 bg-[#EDF0E8]">
-                    <Image
-                      src={siswa.avatar}
-                      alt={siswa.nama}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[14px] font-bold text-[#3D4127] truncate">
                       {siswa.nama}

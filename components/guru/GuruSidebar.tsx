@@ -7,8 +7,6 @@ import { usePathname } from "next/navigation";
 
 export default function GuruSidebar() {
   const pathname = usePathname();
-  const [selectedModul, setSelectedModul] = useState("Alur Modul 1");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const menuItems = [
     {
@@ -39,47 +37,7 @@ export default function GuruSidebar() {
 
   return (
     <aside className="w-[318px] bg-[#FBFFF3] rounded-[16px] p-[12px] flex flex-col gap-[6px] flex-shrink-0 shadow-[0px_2px_2px_0px_#00000040] sticky top-[76px] self-start">
-      {/* Dropdown Alur Modul */}
-      <div className="relative w-full mb-2">
-        <button
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="w-full h-[48px] bg-[#EDF0E8] rounded-[12px] px-4 flex items-center justify-between font-semibold text-[#3D4127] text-[14px] hover:bg-[#e4e8dc] transition-colors"
-        >
-          <span>{selectedModul}</span>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`transition-transform duration-200 ${
-              isDropdownOpen ? "rotate-180" : ""
-            }`}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
 
-        {isDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-[#FBFFF3] border border-[#D3D8C3] rounded-[12px] shadow-lg overflow-hidden z-20">
-            {["Alur Modul 1", "Alur Modul 2", "Alur Modul 3"].map((modul) => (
-              <div
-                key={modul}
-                onClick={() => {
-                  setSelectedModul(modul);
-                  setIsDropdownOpen(false);
-                }}
-                className="px-4 py-2.5 text-[14px] font-medium text-[#3D4127] hover:bg-[#EDF0E8] cursor-pointer transition-colors"
-              >
-                {modul}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Main Menu List */}
       <div className="flex flex-col gap-[6px] w-full">

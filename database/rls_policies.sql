@@ -66,6 +66,18 @@ create policy "Siswa bisa menambah progress miliknya"
   to authenticated
   with check (siswa_id = auth.uid());
 
+-- Guru bisa mengupdate progress siswa (diperlukan saat menyetujui/menolak tugas dan membuka bab selanjutnya)
+create policy "Guru bisa mengupdate progress siswa"
+  on public.progress_siswa for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role = 'guru'
+    )
+  );
+
+
 -- ==============================================================================
 -- POLICY UNTUK TABEL SUBMISSION_AKSI & JAWABAN
 -- ==============================================================================
@@ -220,4 +232,37 @@ create policy "Guru bisa mengelola semua sertifikat"
       where profiles.id = auth.uid() and profiles.role = 'guru'
     )
   );
+
+-- ==============================================================================
+-- POLICY UNTUK STORAGE BUCKET 'sertifikat'
+-- ==============================================================================
+insert into storage.buckets (id, name, public)
+values ('sertifikat', 'sertifikat', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Siapa saja bisa melihat sertifikat publik" on storage.objects;
+drop policy if exists "Guru dan user terautentikasi bisa upload sertifikat" on storage.objects;
+drop policy if exists "Guru dan user terautentikasi bisa update sertifikat" on storage.objects;
+drop policy if exists "Guru dan user terautentikasi bisa delete sertifikat" on storage.objects;
+
+create policy "Siapa saja bisa melihat sertifikat publik"
+  on storage.objects for select
+  using (bucket_id = 'sertifikat');
+
+create policy "Guru dan user terautentikasi bisa upload sertifikat"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'sertifikat');
+
+create policy "Guru dan user terautentikasi bisa update sertifikat"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'sertifikat')
+  with check (bucket_id = 'sertifikat');
+
+create policy "Guru dan user terautentikasi bisa delete sertifikat"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'sertifikat');
+
 

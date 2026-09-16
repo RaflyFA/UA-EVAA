@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import ToastNotification from "@/components/ToastNotification";
 
 interface SiswaItem {
   id: string;
@@ -48,6 +49,26 @@ export default function GuruSiswaPenilaianPage() {
   const [isUploadingCert, setIsUploadingCert] = useState(false);
   const [certError, setCertError] = useState<string | null>(null);
   const [certSuccess, setCertSuccess] = useState<string | null>(null);
+
+  // Toast notification state (5 detik otomatis hilang)
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "warning";
+  } | null>(null);
+
+  // Modal Reset Password states
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [selectedSiswaForReset, setSelectedSiswaForReset] = useState<SiswaItem | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmittingReset, setIsSubmittingReset] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  // Modal Hapus Siswa states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedSiswaForDelete, setSelectedSiswaForDelete] = useState<SiswaItem | null>(null);
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -165,6 +186,11 @@ export default function GuruSiswaPenilaianPage() {
       return;
     }
 
+    if (certFile && certFile.size > 10 * 1024 * 1024) {
+      setCertError("Ukuran file terlalu besar! Maksimal ukuran file adalah 10MB.");
+      return;
+    }
+
     try {
       setIsUploadingCert(true);
       setCertError(null);
@@ -250,6 +276,121 @@ export default function GuruSiswaPenilaianPage() {
       setCertError(errObj.message || "Gagal menerbitkan sertifikat.");
     } finally {
       setIsUploadingCert(false);
+    }
+  };
+
+  // Handler Modal Reset Kata Sandi Siswa
+  const handleOpenResetModal = (siswa: SiswaItem) => {
+    setSelectedSiswaForReset(siswa);
+    setNewPassword("siswa123!");
+    setShowPassword(false);
+    setResetError(null);
+    setIsResetModalOpen(true);
+  };
+
+  const handleConfirmReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSiswaForReset) return;
+    if (!newPassword || newPassword.trim().length < 6) {
+      setResetError("Kata sandi baru minimal 6 karakter.");
+      return;
+    }
+
+    setIsSubmittingReset(true);
+    setResetError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch("/api/admin/siswa", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          siswa_id: selectedSiswaForReset.id,
+          new_password: newPassword.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setResetError(data.error || "Gagal mengatur ulang kata sandi.");
+      } else {
+        const studentName = selectedSiswaForReset.nama;
+        const passCreated = newPassword.trim();
+        setIsResetModalOpen(false);
+        setToast({
+          message: `Kata sandi siswa "${studentName}" berhasil diatur ulang menjadi "${passCreated}".`,
+          type: "success",
+        });
+      }
+    } catch (err: unknown) {
+      const errObj = err as Error;
+      setResetError(
+        errObj?.message || "Terjadi kesalahan saat mereset kata sandi."
+      );
+    } finally {
+      setIsSubmittingReset(false);
+    }
+  };
+
+  // Handler Modal Hapus Siswa
+  const handleOpenDeleteModal = (siswa: SiswaItem) => {
+    setSelectedSiswaForDelete(siswa);
+    setDeleteError(null);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedSiswaForDelete) return;
+
+    setIsSubmittingDelete(true);
+    setDeleteError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch("/api/admin/siswa", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          siswa_id: selectedSiswaForDelete.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error || "Gagal menghapus akun siswa.");
+      } else {
+        const deletedNama = selectedSiswaForDelete.nama;
+        // Hapus dari state lokal
+        setSiswaData((prev) =>
+          prev.filter((s) => s.id !== selectedSiswaForDelete.id)
+        );
+        setIsDeleteModalOpen(false);
+        setToast({
+          message: `Akun siswa "${deletedNama}" dan seluruh datanya berhasil dihapus permanen.`,
+          type: "success",
+        });
+      }
+    } catch (err: unknown) {
+      const errObj = err as Error;
+      setDeleteError(
+        errObj?.message || "Terjadi kesalahan saat menghapus akun siswa."
+      );
+    } finally {
+      setIsSubmittingDelete(false);
     }
   };
 
@@ -456,14 +597,15 @@ export default function GuruSiswaPenilaianPage() {
               className="object-contain"
             />
           </div>
-          <div className="flex-[1.5] truncate">Kelas</div>
-          <div className="flex-[3.5] flex items-center justify-between pr-4">
+          <div className="flex-[1.2] truncate">Kelas</div>
+          <div className="flex-[3.3] flex items-center justify-between pr-4">
             <span className="truncate">Progres 5 Tahap Niti</span>
             <span className="text-[11px] text-[#9CA08D]/80">
               Harti • Surti • Bukti • Bakti • Sajati
             </span>
           </div>
-          <div className="flex-[2] text-center truncate">Sertifikat</div>
+          <div className="flex-[1.8] text-center truncate">Sertifikat</div>
+          <div className="w-[84px] text-center truncate">Kelola Akun</div>
           <div className="w-6" />
         </div>
 
@@ -512,30 +654,22 @@ export default function GuruSiswaPenilaianPage() {
                   onClick={() => router.push(`/guru/siswa/${row.id}`)}
                   className="w-full h-[52px] px-[12px] flex items-center gap-[10px] text-[#3D4127] transition-all border-b border-[#EDF0E8] last:border-0 hover:bg-[#EDF0E8]/40 rounded-xl cursor-pointer group"
                 >
-                  {/* Kolom Siswa (Avatar + Nama) */}
+                  {/* Kolom Siswa (Nama) */}
                   <div className="flex-[3] flex items-center gap-3 truncate">
-                    <div className="w-8 h-8 rounded-full overflow-hidden relative flex-shrink-0 border border-[#3D4127]/10 bg-[#EDF0E8]">
-                      <Image
-                        src={row.avatar}
-                        alt={row.nama}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
                     <span className="text-[14px] font-bold text-[#3D4127] group-hover:text-[#636B2F] transition-colors truncate">
                       {row.nama}
                     </span>
                   </div>
 
                   {/* Kolom Kelas */}
-                  <div className="flex-[1.5] text-[14px] font-semibold text-[#3D4127]/80 truncate">
+                  <div className="flex-[1.2] text-[14px] font-semibold text-[#3D4127]/80 truncate">
                     <span className="px-2.5 py-0.5 rounded-md bg-[#EDF0E8] text-[#3D4127]">
                       {row.kelas}
                     </span>
                   </div>
 
                   {/* Kolom Progres Modul (5 Kapsul) */}
-                  <div className="flex-[3.5] flex items-center gap-[6px]">
+                  <div className="flex-[3.3] flex items-center gap-[6px]">
                     {row.progress.map((isFilled, idx) => (
                       <div
                         key={idx}
@@ -557,7 +691,7 @@ export default function GuruSiswaPenilaianPage() {
                   </div>
 
                   {/* Kolom Status & Aksi Sertifikat */}
-                  <div className="flex-[2] flex items-center justify-center">
+                  <div className="flex-[1.8] flex items-center justify-center">
                     {cert ? (
                       <div className="flex items-center gap-1.5">
                         <button
@@ -603,6 +737,59 @@ export default function GuruSiswaPenilaianPage() {
                     )}
                   </div>
 
+                  {/* Kolom Aksi Kelola Akun (Reset Sandi & Hapus) */}
+                  <div className="w-[84px] flex items-center justify-center gap-1.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenResetModal(row);
+                      }}
+                      title={`Atur Ulang Kata Sandi ${row.nama}`}
+                      className="w-7 h-7 rounded-[8px] bg-[#636B2F]/10 hover:bg-[#636B2F]/25 text-[#636B2F] flex items-center justify-center transition-all cursor-pointer border border-[#636B2F]/25 hover:border-[#636B2F]/50 shadow-2xs active:scale-95"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L11 9l-1.5-1.5L8 9" />
+                        <path d="M15.5 10.5a5 5 0 1 0-7.07 7.07 5 5 0 0 0 7.07-7.07z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDeleteModal(row);
+                      }}
+                      title={`Hapus Akun ${row.nama}`}
+                      className="w-7 h-7 rounded-[8px] bg-[#dc2626]/10 hover:bg-[#dc2626]/25 text-[#dc2626] flex items-center justify-center transition-all cursor-pointer border border-[#dc2626]/25 hover:border-[#dc2626]/50 shadow-2xs active:scale-95"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    </button>
+                  </div>
+
                   {/* Tombol Opsi / Arrow */}
                   <div className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0">
                     <svg
@@ -621,6 +808,7 @@ export default function GuruSiswaPenilaianPage() {
                   </div>
                 </div>
               );
+
             })}
           </div>
         )}
@@ -727,18 +915,15 @@ export default function GuruSiswaPenilaianPage() {
           <div className="w-full max-w-[540px] bg-[#FBFFF3] rounded-[28px] p-6 sm:p-7 shadow-[0px_4px_16px_rgba(0,0,0,0.15)] border border-[#D3D8C3] flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-[#D3D8C3] pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[22px]">📜</span>
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#3D4127]">
-                    {sertifikatMap[selectedSiswaForCert.id]
-                      ? "Perbarui Sertifikat Siswa"
-                      : "Terbitkan Sertifikat Siswa"}
-                  </h3>
-                  <p className="text-[12px] text-[#3D4127]/70">
-                    Unggah berkas sertifikat resmi (PDF/gambar) untuk siswa bersangkutan.
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-[18px] font-bold text-[#3D4127]">
+                  {sertifikatMap[selectedSiswaForCert.id]
+                    ? "Perbarui Sertifikat Siswa"
+                    : "Terbitkan Sertifikat Siswa"}
+                </h3>
+                <p className="text-[12px] text-[#3D4127]/70">
+                  Unggah berkas sertifikat resmi (PDF/gambar) untuk siswa bersangkutan.
+                </p>
               </div>
               <button
                 onClick={() => setIsSertifikatModalOpen(false)}
@@ -750,14 +935,7 @@ export default function GuruSiswaPenilaianPage() {
 
             {/* Info Singkat Siswa */}
             <div className="flex items-center gap-3 p-3 rounded-[16px] bg-[#EDF0E8] border border-[#D3D8C3]/60">
-              <div className="w-10 h-10 rounded-full overflow-hidden relative border border-[#3D4127]/10 bg-white">
-                <Image
-                  src={selectedSiswaForCert.avatar}
-                  alt={selectedSiswaForCert.nama}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+              
               <div className="flex flex-col">
                 <span className="text-[14px] font-bold text-[#3D4127]">
                   {selectedSiswaForCert.nama}
@@ -819,6 +997,13 @@ export default function GuruSiswaPenilaianPage() {
                   accept=".pdf,image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
+                    if (file && file.size > 10 * 1024 * 1024) {
+                      setCertError("Ukuran file terlalu besar! Maksimal ukuran file adalah 10MB.");
+                      setCertFile(null);
+                      e.target.value = "";
+                      return;
+                    }
+                    setCertError(null);
                     setCertFile(file);
                   }}
                   className="w-full file:mr-3 file:py-2 file:px-4 file:rounded-[10px] file:border-0 file:text-[12px] file:font-semibold file:bg-[#636B2F] file:text-white hover:file:bg-[#525826] file:cursor-pointer border border-[#D3D8C3] bg-white rounded-[14px] p-2 text-[13px] text-[#3D4127]"
@@ -870,6 +1055,198 @@ export default function GuruSiswaPenilaianPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Reset Kata Sandi Siswa */}
+      {isResetModalOpen && selectedSiswaForReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="w-full max-w-[500px] bg-[#FBFFF3] rounded-[28px] p-6 sm:p-8 shadow-[0px_8px_30px_rgba(0,0,0,0.2)] border border-[#D3D8C3] flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            {/* Header Modal */}
+            <div className="flex items-center justify-between border-b border-[#D3D8C3] pb-4">
+              <div>
+                <h3 className="text-[18px] font-bold text-[#3D4127]">
+                  Atur Ulang Kata Sandi
+                </h3>
+                <p className="text-[13px] text-[#3D4127]/70 font-medium">
+                  {selectedSiswaForReset.nama} ({selectedSiswaForReset.kelas})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#3D4127]/60 hover:text-[#3D4127] hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Info Box */}
+            <div className="p-3.5 rounded-[16px] bg-[#636B2F]/10 border border-[#636B2F]/25 text-[12.5px] text-[#3D4127] leading-relaxed">
+              💡 Guru dapat memberikan kata sandi baru untuk siswa yang lupa kata sandi. Beritahukan kata sandi baru ini kepada siswa bersangkutan setelah berhasil disimpan.
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleConfirmReset} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-bold text-[#3D4127]">
+                  Kata Sandi Baru
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimal 6 karakter"
+                    required
+                    minLength={6}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#D3D8C3] rounded-[14px] text-[14px] text-[#3D4127] placeholder-[#3D4127]/40 focus:outline-none focus:border-[#636B2F] pr-20"
+                  />
+                  <div className="absolute right-2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="px-2 py-1 text-[11px] font-bold text-[#636B2F] hover:bg-[#636B2F]/10 rounded-md transition-colors cursor-pointer"
+                    >
+                      {showPassword ? "Sembunyi" : "Lihat"}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[#3D4127]/60 mt-1">
+                  <span>Minimal 6 karakter</span>
+                  <button
+                    type="button"
+                    onClick={() => setNewPassword("siswa123!")}
+                    className="text-[#636B2F] font-bold hover:underline cursor-pointer"
+                  >
+                    Gunakan Sandi Cepat (siswa123!)
+                  </button>
+                </div>
+              </div>
+
+              {resetError && (
+                <div className="p-3 rounded-[12px] bg-red-100 border border-red-300 text-red-700 text-[12px] font-medium">
+                  {resetError}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#D3D8C3]">
+                <button
+                  type="button"
+                  onClick={() => setIsResetModalOpen(false)}
+                  disabled={isSubmittingReset}
+                  className="px-4 py-2 text-[#3D4127]/70 hover:text-[#3D4127] font-bold text-[14px] rounded-[12px] transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReset}
+                  className="px-5 py-2.5 bg-[#636B2F] hover:bg-[#525826] text-white font-bold text-[14px] rounded-[14px] transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingReset ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <span>Simpan Sandi Baru</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Siswa */}
+      {isDeleteModalOpen && selectedSiswaForDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="w-full max-w-[480px] bg-[#FBFFF3] rounded-[28px] p-6 sm:p-8 shadow-[0px_8px_30px_rgba(0,0,0,0.2)] border border-[#D3D8C3] flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            {/* Header Modal Bahaya */}
+            <div className="flex items-center justify-between border-b border-[#D3D8C3] pb-4">
+              <div>
+                <h3 className="text-[18px] font-bold text-[#3D4127]">
+                  Hapus Akun Siswa?
+                </h3>
+                <p className="text-[12.5px] text-red-600 font-semibold">
+                  Tindakan ini tidak dapat dibatalkan
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#3D4127]/60 hover:text-[#3D4127] hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Pesan Konfirmasi */}
+            <div className="flex flex-col gap-3 text-[13.5px] text-[#3D4127] leading-relaxed">
+              <p>
+                Apakah Anda yakin ingin menghapus akun siswa berikut secara permanen?
+              </p>
+              <div className="p-3.5 rounded-[16px] bg-red-50 border border-red-200 flex items-center gap-3">
+                <div>
+                  <div className="font-bold text-[#3D4127] text-[14px]">
+                    {selectedSiswaForDelete.nama}
+                  </div>
+                  <div className="text-[12px] text-[#3D4127]/70">
+                    Kelas: {selectedSiswaForDelete.kelas}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[12px] text-[#3D4127]/80">
+                Semua data terkait termasuk riwayat pengerjaan 5 Tahap Niti, pengumpulan berkas, dan sertifikat akan dihapus permanen dari sistem.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-[12px] bg-red-100 border border-red-300 text-red-700 text-[12px] font-medium">
+                {deleteError}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#D3D8C3]">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isSubmittingDelete}
+                className="px-4 py-2 text-[#3D4127]/70 hover:text-[#3D4127] font-bold text-[14px] rounded-[12px] transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isSubmittingDelete}
+                className="px-5 py-2.5 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold text-[14px] rounded-[14px] transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmittingDelete ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <span>Ya, Hapus Akun</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification (Muncul di atas dan hilang dalam 5 detik) */}
+      {toast && (
+        <ToastNotification
+          message={toast.message}
+          type={toast.type}
+          duration={5000}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
+

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import ToastNotification from "@/components/ToastNotification";
 
 interface SubmissionRow {
   id: string; // submission_aksi.id
@@ -181,40 +182,43 @@ export default function GuruProjectPage() {
 
       // 2. Sinkronkan dengan progress_siswa
       if (newStatus === "disetujui") {
-        await supabase
+        const { error: progErr } = await supabase
           .from("progress_siswa")
           .update({ status: "disetujui", tanggal_selesai: now })
           .eq("siswa_id", target.siswaId)
           .eq("tahap_niti", target.tahapNiti);
+        if (progErr) console.warn("Error updating current progress_siswa:", progErr.message);
 
-        // Buka tahap berikutnya jika masih terkunci
+        // Buka tahap berikutnya
         if (target.tahapNiti === "bukti") {
-          await supabase
+          const { error: nextErr } = await supabase
             .from("progress_siswa")
             .update({ status: "tersedia" })
             .eq("siswa_id", target.siswaId)
-            .eq("tahap_niti", "bakti")
-            .eq("status", "terkunci");
+            .eq("tahap_niti", "bakti");
+          if (nextErr) console.warn("Error unlocking Niti Bakti:", nextErr.message);
         } else if (target.tahapNiti === "bakti") {
-          await supabase
+          const { error: nextErr } = await supabase
             .from("progress_siswa")
             .update({ status: "tersedia" })
             .eq("siswa_id", target.siswaId)
-            .eq("tahap_niti", "sajati")
-            .eq("status", "terkunci");
+            .eq("tahap_niti", "sajati");
+          if (nextErr) console.warn("Error unlocking Niti Sajati:", nextErr.message);
         }
       } else if (newStatus === "perlu_revisi") {
-        await supabase
+        const { error: progErr } = await supabase
           .from("progress_siswa")
           .update({ status: "perlu_revisi" })
           .eq("siswa_id", target.siswaId)
           .eq("tahap_niti", target.tahapNiti);
+        if (progErr) console.warn("Error updating progress_siswa to perlu_revisi:", progErr.message);
       } else {
-        await supabase
+        const { error: progErr } = await supabase
           .from("progress_siswa")
           .update({ status: "menunggu_review" })
           .eq("siswa_id", target.siswaId)
           .eq("tahap_niti", target.tahapNiti);
+        if (progErr) console.warn("Error updating progress_siswa to menunggu_review:", progErr.message);
       }
 
       setNotification({
@@ -337,23 +341,11 @@ export default function GuruProjectPage() {
     <div className="w-full flex flex-col gap-4">
       {/* Toast Notification */}
       {notification && (
-        <div
-          className={`w-full max-w-[1158px] rounded-[14px] px-4 py-3 text-[14px] font-semibold flex items-center justify-between border shadow-sm transition-all ${
-            notification.type === "success"
-              ? "bg-[#636B2F]/10 border-[#636B2F] text-[#3D4127]"
-              : "bg-[#dc2626]/10 border-[#dc2626] text-[#b91c1c]"
-          }`}
-        >
-          <span>
-            {notification.type === "success" ? "✓" : "✕"} {notification.message}
-          </span>
-          <button
-            onClick={() => setNotification(null)}
-            className="opacity-70 hover:opacity-100 ml-4 font-bold cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
+        <ToastNotification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
 
       {/* Top Control Bar (Search & Filters) */}
@@ -540,20 +532,8 @@ export default function GuruProjectPage() {
                   key={row.id}
                   className="w-full min-h-[64px] px-[12px] py-2 flex items-center gap-[12px] text-[#3D4127] transition-colors border-b border-[#EDF0E8] last:border-0 hover:bg-[#EDF0E8]/30 rounded-lg"
                 >
-                  {/* Kolom Siswa (Avatar + Nama Link + Kelas Badge) */}
+                  {/* Kolom Siswa (Nama Link + Kelas Badge) */}
                   <div className="flex-[3] flex items-center gap-3 truncate">
-                    <Link
-                      href={`/guru/siswa/${row.siswaId}`}
-                      className="w-9 h-9 rounded-full overflow-hidden relative flex-shrink-0 border border-[#3D4127]/10 hover:ring-2 hover:ring-[#636B2F] transition-all cursor-pointer"
-                      title={`Buka detail ${row.nama}`}
-                    >
-                      <Image
-                        src={row.avatar}
-                        alt={row.nama}
-                        fill
-                        className="object-cover"
-                      />
-                    </Link>
                     <div className="flex flex-col min-w-0">
                       <Link
                         href={`/guru/siswa/${row.siswaId}`}

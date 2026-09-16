@@ -92,13 +92,32 @@ export default function AlurModulPage() {
 
     if (!authLoading) {
       loadProgress();
+
+      const handleRefresh = () => {
+        if (document.visibilityState === "visible") {
+          loadProgress();
+        }
+      };
+
+      window.addEventListener("focus", handleRefresh);
+      document.addEventListener("visibilitychange", handleRefresh);
+
+      return () => {
+        window.removeEventListener("focus", handleRefresh);
+        document.removeEventListener("visibilitychange", handleRefresh);
+      };
     }
   }, [user, profile, authLoading]);
 
   // Tentukan tahap yang sedang aktif (yang belum 'disetujui') untuk tombol bawah
   const currentUnfinishedBab = babs.find((b) => {
     const status = progressMap[b.key] || "terkunci";
-    return status === "tersedia" || status === "sedang_dikerjakan";
+    return (
+      status === "tersedia" ||
+      status === "sedang_dikerjakan" ||
+      status === "menunggu_review" ||
+      status === "perlu_revisi"
+    );
   }) || babs[0];
 
   const allCompleted = babs.every((b) => progressMap[b.key] === "disetujui");
@@ -131,9 +150,11 @@ export default function AlurModulPage() {
           {babs.map((bab, index) => {
             const status = progressMap[bab.key] || "terkunci";
             const isCompleted = status === "disetujui";
+            const isReview = status === "menunggu_review";
+            const isRevision = status === "perlu_revisi";
             const isAvailable = status === "tersedia" || status === "sedang_dikerjakan";
-            // User diizinkan membuka bab yang tersedia maupun yang sudah selesai (bisa kembali lagi)
-            const isOpen = isCompleted || isAvailable;
+            // User diizinkan membuka bab yang tersedia, sedang direview, perlu revisi, maupun yang sudah selesai
+            const isOpen = isCompleted || isAvailable || isReview || isRevision;
 
             return (
               <div key={bab.id} className="w-full flex flex-col items-center">
@@ -156,6 +177,16 @@ export default function AlurModulPage() {
                         {isCompleted && (
                           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#636B2F]/15 text-[#636B2F]">
                             Selesai
+                          </span>
+                        )}
+                        {isReview && (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#EAB308]/20 text-[#A16207]">
+                            Review
+                          </span>
+                        )}
+                        {isRevision && (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#EF4444]/20 text-[#B91C1C]">
+                            Revisi
                           </span>
                         )}
                         <Image

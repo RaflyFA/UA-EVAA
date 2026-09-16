@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import ToastNotification from "@/components/ToastNotification";
 
 interface StageMeta {
   number: string;
@@ -372,7 +373,6 @@ export default function GuruEditModulPage() {
         type: "success",
         message: `Konten untuk ${config.title} berhasil disimpan ke database!`,
       });
-      setTimeout(() => setNotification(null), 4000);
     } catch (err: any) {
       console.error("Gagal menyimpan perubahan modul:", err);
       setNotification({
@@ -397,21 +397,11 @@ export default function GuruEditModulPage() {
     <div className="w-full flex flex-col gap-4">
       {/* Toast Notifikasi */}
       {notification && (
-        <div
-          className={`w-full max-w-[1158px] p-4 rounded-[12px] font-medium text-[14px] flex items-center justify-between shadow-sm transition-all ${
-            notification.type === "success"
-              ? "bg-[#E6F4EA] text-[#137333] border border-[#CEEAD6]"
-              : "bg-[#FCE8E6] text-[#C5221F] border border-[#FAD2CF]"
-          }`}
-        >
-          <span>{notification.message}</span>
-          <button
-            onClick={() => setNotification(null)}
-            className="text-[12px] underline ml-4 hover:opacity-75 cursor-pointer"
-          >
-            Tutup
-          </button>
-        </div>
+        <ToastNotification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
 
       {/* Top Bar Main Content */}

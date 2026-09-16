@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import ToastNotification from "@/components/ToastNotification";
 
 interface KomponenNilai {
   tahap: "harti" | "surti" | "bukti" | "bakti" | "sajati";
@@ -393,19 +394,20 @@ export default function GuruDetailPenilaianPage({
 
           // Update progress_siswa untuk bukti
           if (score >= 70) {
-            await supabase
+            const { error: progErr } = await supabase
               .from("progress_siswa")
               .update({ status: "disetujui", tanggal_selesai: now })
               .eq("siswa_id", siswa.id)
               .eq("tahap_niti", "bukti");
+            if (progErr) console.warn("Error updating bukti progress_siswa:", progErr.message);
 
-            // Buka Niti Bakti jika terkunci
-            await supabase
+            // Buka Niti Bakti
+            const { error: nextErr } = await supabase
               .from("progress_siswa")
               .update({ status: "tersedia" })
               .eq("siswa_id", siswa.id)
-              .eq("tahap_niti", "bakti")
-              .eq("status", "terkunci");
+              .eq("tahap_niti", "bakti");
+            if (nextErr) console.warn("Error unlocking Niti Bakti:", nextErr.message);
           }
         }
 
@@ -437,19 +439,20 @@ export default function GuruDetailPenilaianPage({
 
           // Update progress_siswa untuk bakti
           if (score >= 70) {
-            await supabase
+            const { error: progErr } = await supabase
               .from("progress_siswa")
               .update({ status: "disetujui", tanggal_selesai: now })
               .eq("siswa_id", siswa.id)
               .eq("tahap_niti", "bakti");
+            if (progErr) console.warn("Error updating bakti progress_siswa:", progErr.message);
 
-            // Buka Niti Sajati jika terkunci
-            await supabase
+            // Buka Niti Sajati
+            const { error: nextErr } = await supabase
               .from("progress_siswa")
               .update({ status: "tersedia" })
               .eq("siswa_id", siswa.id)
-              .eq("tahap_niti", "sajati")
-              .eq("status", "terkunci");
+              .eq("tahap_niti", "sajati");
+            if (nextErr) console.warn("Error unlocking Niti Sajati:", nextErr.message);
           }
         }
 
@@ -549,24 +552,11 @@ export default function GuruDetailPenilaianPage({
 
       {/* Notification Toast */}
       {saveNotification && (
-        <div
-          className={`w-full max-w-[1158px] rounded-[12px] px-4 py-3 text-[14px] font-semibold flex items-center justify-between border ${
-            saveNotification.type === "success"
-              ? "bg-[#636B2F]/10 border-[#636B2F] text-[#3D4127]"
-              : "bg-[#dc2626]/10 border-[#dc2626] text-[#b91c1c]"
-          }`}
-        >
-          <span>
-            {saveNotification.type === "success" ? "✓" : "✕"}{" "}
-            {saveNotification.message}
-          </span>
-          <button
-            onClick={() => setSaveNotification(null)}
-            className="opacity-70 hover:opacity-100 ml-4 cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
+        <ToastNotification
+          message={saveNotification.message}
+          type={saveNotification.type}
+          onClose={() => setSaveNotification(null)}
+        />
       )}
 
       {/* Filter & Judul Box */}
@@ -694,14 +684,6 @@ export default function GuruDetailPenilaianPage({
                   className="flex items-center justify-between cursor-pointer w-full select-none"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden relative border border-[#3D4127]/10 bg-[#EDF0E8] flex-shrink-0">
-                      <Image
-                        src={siswa.avatar}
-                        alt={siswa.nama}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span className="text-[16px] font-bold text-[#3D4127]">

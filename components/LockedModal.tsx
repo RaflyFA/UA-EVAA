@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 interface LockedModalProps {
   isOpen: boolean;
   title?: string;
@@ -39,19 +37,6 @@ export default function LockedModal({
       aria-modal="true"
     >
       <div className="w-full max-w-[360px] bg-[#FBFFF3] border border-[#3D4127]/15 rounded-[28px] shadow-[0px_16px_36px_rgba(0,0,0,0.22)] p-6 sm:p-7 flex flex-col items-center text-center gap-4 transition-all animate-in zoom-in-95 duration-200">
-        {/* Ikon Gembok Elegan */}
-        <div className="w-16 h-16 rounded-full bg-[#636B2F]/15 border-2 border-[#636B2F]/30 flex items-center justify-center shadow-inner">
-          <div className="relative w-8 h-8 flex items-center justify-center">
-            <Image
-              src="/icon-gembok.svg"
-              alt="Ikon Gembok Terkunci"
-              width={30}
-              height={30}
-              className="object-contain filter brightness-0 invert-[0.35] sepia-[0.3] hue-rotate-[45deg]"
-            />
-          </div>
-        </div>
-
         {/* Header Teks */}
         <div className="flex flex-col gap-1.5 w-full">
           
