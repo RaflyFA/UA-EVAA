@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 interface SidebarProps {
@@ -10,6 +11,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const router = useRouter();
   const { user, profile, signOut } = useAuth();
   // State untuk melacak dropdown mana yang terbuka
   const [activeDropdown, setActiveDropdown] = useState<"tentang" | "alur" | null>(null);
@@ -346,6 +348,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={async () => {
                     await signOut();
                     onClose();
+                    router.push("/login");
                   }}
                   className="w-full py-2 bg-[#f87171]/15 hover:bg-[#f87171]/25 text-[#b91c1c] text-[13px] font-bold rounded-[14px] transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >

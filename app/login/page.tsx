@@ -10,19 +10,11 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "register">("login");
 
   // State Login
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
-
-  // State Forgot Password
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [isForgotSent, setIsForgotSent] = useState(false);
-  const [forgotNotice, setForgotNotice] = useState<{
-    isSiswa: boolean;
-    message: string;
-  } | null>(null);
 
   // State Register
   const [namaLengkap, setNamaLengkap] = useState("");
@@ -106,6 +98,13 @@ function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
+
+    if (password.length < 8) {
+      setErrorMessage("Kata sandi minimal 8 karakter.");
+      setIsLoading(false);
+      return;
+    }
+
     // Validasi Sandi Khusus Pengajar jika mendaftar sebagai Guru
     if (registerRole === "guru") {
       const validPin = process.env.NEXT_PUBLIC_TEACHER_PIN || "GURU-EVAA-2026";
@@ -165,43 +164,6 @@ function LoginForm() {
     }
   };
 
-  // 3. Handle Submit Lupa Password (Kirim Link Reset via Email khusus Guru)
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage(null);
-    setForgotNotice(null);
-
-    const email = formatEmail(forgotEmail);
-
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok && !data.isSiswa) {
-        setErrorMessage(
-          data.error || "Gagal memproses permintaan pengaturan ulang kata sandi."
-        );
-      } else {
-        setForgotNotice({
-          isSiswa: !!data.isSiswa,
-          message:
-            data.message ||
-            "Jika email Anda terdaftar, instruksi pemulihan telah dikirim.",
-        });
-      }
-    } catch (err: unknown) {
-      console.error("Error saat meminta reset password:", err);
-      setErrorMessage("Terjadi kendala jaringan saat menghubungi server.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <main className="min-h-screen w-screen flex items-center justify-center relative overflow-hidden font-sans select-none py-10 px-4">
@@ -244,15 +206,12 @@ function LoginForm() {
           <p className="text-[14px] font-[500] leading-[20px] text-[#FBFFF3]/90">
             {mode === "login"
               ? "Masuk untuk mengakses materi dan tugas"
-              : mode === "register"
-              ? "Daftar akun baru Siswa atau Guru"
-              : "Pemulihan Kata Sandi Akun"}
+              : "Daftar akun baru Siswa atau Guru"}
           </p>
         </div>
 
-        {/* Tab Switch: Masuk / Daftar (hanya tampil saat bukan mode forgot) */}
-        {mode !== "forgot" ? (
-          <div className="w-full flex bg-[#FBFFF325] rounded-[16px] p-1 border border-[#FBFFF320]">
+        {/* Tab Switch: Masuk / Daftar */}
+        <div className="w-full flex bg-[#FBFFF325] rounded-[16px] p-1 border border-[#FBFFF320]">
             <button
               type="button"
               onClick={() => {
@@ -282,7 +241,6 @@ function LoginForm() {
               Daftar Akun
             </button>
           </div>
-        ) : null}
 
         {/* Notifikasi Alert Error */}
         {errorMessage && (
@@ -313,7 +271,7 @@ function LoginForm() {
               <input
                 type="text"
                 value={emailOrUsername}
-                onChange={(e) => setEmailOrUsername(e.target.value)}
+                onChange={(e) => setEmailOrUsername(e.target.value.toLowerCase())}
                 placeholder="Email atau Username"
                 className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
                 required
@@ -339,24 +297,6 @@ function LoginForm() {
               />
             </div>
 
-            {/* Link Lupa Kata Sandi */}
-            <div className="flex justify-end -mt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("forgot");
-                  setErrorMessage(null);
-                  setSuccessMessage(null);
-                  setIsForgotSent(false);
-                  if (emailOrUsername.includes("@")) {
-                    setForgotEmail(emailOrUsername);
-                  }
-                }}
-                className="text-[13px] font-[500] text-[#FBFFF3]/80 hover:text-white transition-color sunderline underline-offset-2 cursor-pointer mr-1"
-              >
-                Lupa Kata Sandi?
-              </button>
-            </div>
 
             {/* Tombol Aksi: Kembali ke Beranda (Icon) & Masuk */}
             <div className="w-full flex items-center gap-2.5 mt-1">
@@ -542,7 +482,7 @@ function LoginForm() {
               <input
                 type="text"
                 value={emailOrUsername}
-                onChange={(e) => setEmailOrUsername(e.target.value)}
+                onChange={(e) => setEmailOrUsername(e.target.value.toLowerCase())}
                 placeholder="Email (cth: ahmad@sekolah.id)"
                 className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
                 required
@@ -599,10 +539,10 @@ function LoginForm() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Kata Sandi Minimal 6 Karakter"
+                placeholder="Kata Sandi Minimal 8 Karakter"
                 className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -646,125 +586,6 @@ function LoginForm() {
           </form>
         )}
 
-        {/* 3. FORM LUPA KATA SANDI */}
-        {mode === "forgot" && (
-          <div className="w-full flex flex-col gap-[14px]">
-            {forgotNotice ? (
-              <div className="w-full flex flex-col items-center text-center gap-4 py-2">
-                <div
-                  className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${
-                    forgotNotice.isSiswa
-                      ? "bg-[#eab308]/20 border border-[#eab308] text-[#fef08a]"
-                      : "bg-[#4ade80]/20 border border-[#4ade80] text-[#86efac]"
-                  }`}
-                >
-                  {forgotNotice.isSiswa ? "⚠️" : "✉️"}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-[18px] font-bold text-[#FBFFF3]">
-                    {forgotNotice.isSiswa
-                      ? "Khusus Akun Siswa"
-                      : "Tautan Pemulihan Dikirim"}
-                  </h3>
-                  <p className="text-[13px] text-[#FBFFF3]/90 leading-relaxed px-1">
-                    {forgotNotice.message}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode("login");
-                    setForgotNotice(null);
-                    setErrorMessage(null);
-                  }}
-                  className="w-full h-[52px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center font-[700] text-[#3D4127] text-[16px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer mt-2"
-                >
-                  Kembali ke Halaman Masuk
-                </button>
-              </div>
-            ) : (
-              <form
-                onSubmit={handleForgotPassword}
-                className="w-full flex flex-col gap-[14px]"
-              >
-                <p className="text-[13px] text-[#FBFFF3]/90 leading-relaxed">
-                  Masukkan alamat email yang terdaftar pada akun Anda. Kami akan
-                  mengirimkan tautan untuk mengatur ulang kata sandi.
-                </p>
-
-                {/* Input Email */}
-                <div className="w-full h-[52px] bg-[#FBFFF330] border border-[#FBFFF340] rounded-[16px] px-[16px] flex items-center gap-[14px] focus-within:border-white focus-within:bg-[#FBFFF340] transition-colors">
-                  <Image
-                    src="/icon-profile.png"
-                    alt="Icon Email"
-                    width={22}
-                    height={22}
-                    className="object-contain filter brightness-0 invert flex-shrink-0"
-                  />
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="Masukkan email terdaftar"
-                    className="w-full bg-transparent text-[#FBFFF3] placeholder-[#FBFFF3]/50 text-[15px] font-[500] focus:outline-none"
-                    required
-                  />
-                </div>
-
-                {/* Tombol Aksi: Kembali ke Beranda (Icon) & Kirim */}
-                <div className="w-full flex items-center gap-2.5 mt-1">
-                  <Link
-                    href="/"
-                    title="Kembali ke Beranda"
-                    aria-label="Kembali ke Beranda"
-                    className="w-[54px] h-[54px] flex-shrink-0 bg-[#FBFFF330] hover:bg-[#FBFFF345] border border-[#FBFFF340] rounded-[16px] flex items-center justify-center text-[#FBFFF3] hover:text-white transition-all shadow-[0px_4px_4px_0px_#0000001A] active:scale-95 cursor-pointer"
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      <polyline points="9 22 9 12 15 12 15 22" />
-                    </svg>
-                  </Link>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex-1 h-[54px] bg-[#FBFFF3] rounded-[16px] shadow-[0px_4px_4px_0px_#0000001A] p-[12px] flex items-center justify-center gap-[8px] hover:bg-[#f3f7ea] active:scale-[0.99] transition-all cursor-pointer"
-                  >
-                    {isLoading ? (
-                      <div className="w-6 h-6 border-2 border-[#3D4127] border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <span className="text-[18px] font-[700] text-[#3D4127]">
-                        Kirim Link Reset
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                <div className="w-full text-center mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("login");
-                      setErrorMessage(null);
-                    }}
-                    className="text-[13px] text-[#FBFFF3]/80 hover:text-white transition-colors cursor-pointer"
-                  >
-                    ← Batal dan Kembali ke Masuk
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
 
 
       </div>

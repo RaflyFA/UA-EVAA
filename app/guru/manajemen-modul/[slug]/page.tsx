@@ -241,7 +241,10 @@ export default function GuruEditModulPage() {
 
   const handleDeleteDeskripsi = (index: number) => {
     if (deskripsiCards.length <= 1) {
-      alert("Minimal harus ada 1 Kartu Deskripsi.");
+      setNotification({
+        type: "error",
+        message: "Minimal harus ada 1 Kartu Deskripsi.",
+      });
       return;
     }
     const updated = deskripsiCards.filter((_, i) => i !== index);

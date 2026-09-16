@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import ConfirmModal from "@/components/ConfirmModal";
+import ToastNotification from "@/components/ToastNotification";
 
 interface ModuleItem {
   number: string;
@@ -52,6 +54,16 @@ const defaultModules: ModuleItem[] = [
 
 export default function GuruManajemenModulPage() {
   const [modules] = useState<ModuleItem[]>(defaultModules);
+  const [showUpcomingModal, setShowUpcomingModal] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error" | "warning";
+  }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
 
   return (
     <div className="w-full bg-[#FBFFF3] rounded-[16px] p-6 shadow-[0px_2px_2px_0px_#00000040] flex flex-col gap-6">
@@ -67,7 +79,11 @@ export default function GuruManajemenModulPage() {
             onClick={() => {
               if (typeof window !== "undefined") {
                 navigator.clipboard.writeText(window.location.href);
-                alert("Tautan halaman modul berhasil disalin!");
+                setToast({
+                  show: true,
+                  message: "Tautan halaman modul berhasil disalin!",
+                  type: "success",
+                });
               }
             }}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 text-[#3D4127] transition-colors cursor-pointer"
@@ -145,7 +161,7 @@ export default function GuruManajemenModulPage() {
 
         {/* Card 6: Tambahkan Alur */}
         <div
-          onClick={() => alert("Penambahan alur modul kustom akan tersedia pada pembaruan kurikulum mendatang. Saat ini silakan kelola 5 alur Niti yang tersedia.")}
+          onClick={() => setShowUpcomingModal(true)}
           className="w-full h-[180px] bg-[#EDF0E8]/60 hover:bg-[#EDF0E8] border-2 border-dashed border-[#D3D8C3] hover:border-[#636B2F] rounded-[20px] flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 group"
         >
           <div className="w-10 h-10 rounded-full bg-[#FBFFF3] flex items-center justify-center text-[#818671] group-hover:text-[#5B6628] group-hover:scale-110 transition-all shadow-sm">
@@ -168,6 +184,25 @@ export default function GuruManajemenModulPage() {
           </span>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <ToastNotification
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+        />
+      )}
+
+      {/* Modal Segera Hadir */}
+      <ConfirmModal
+        isOpen={showUpcomingModal}
+        title="Pemberitahuan"
+        message="Penambahan alur modul kustom akan tersedia pada pembaruan kurikulum mendatang. Saat ini silakan kelola 5 alur Niti yang tersedia."
+        confirmText="Mengerti"
+        isAlert={true}
+        onConfirm={() => setShowUpcomingModal(false)}
+      />
     </div>
   );
 }

@@ -42,6 +42,15 @@ export default function NitiBaktiPage() {
     message: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = () => {
+    if (categoryScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
   const [panduan, setPanduan] = useState<string>(
     "Pilihlah salah satu dari 3 kategori aksi lingkungan (Daur Ulang Sampah, Menanam Pohon, atau Gerakan Hemat Energi). Laksanakan aksi tersebut bersama kelompok, dokumentasikan, lalu unggah laporan PDF bukti aksi Anda."
   );
@@ -479,34 +488,66 @@ export default function NitiBaktiPage() {
             Pilih Kategori Aksi
           </h2>
 
-          {/* Scrollable Container Kategori */}
-          <div className="w-full flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex-none w-[134px] h-[180px] bg-[#EDF0E8] rounded-[12px] p-[16px] flex flex-col items-center justify-between gap-[12px] cursor-pointer transition-all duration-200 snap-start border-2 ${
-                    isSelected
-                      ? "border-[#636B2F] shadow-sm bg-[#e4e8dc]"
-                      : "border-transparent hover:border-[#D3D8C3]"
-                  }`}
-                >
-                  <div className="w-full h-[96px] relative rounded-[8px] overflow-hidden flex items-center justify-center bg-[#D3D8C3]/30">
-                    <Image
-                      src={cat.image}
-                      alt={cat.title}
-                      fill
-                      className="object-cover"
-                    />
+          {/* Relative container with shadow arrow scroll indicator */}
+          <div className="relative w-full">
+            <div
+              ref={categoryScrollRef}
+              onScroll={checkScroll}
+              className="w-full flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x scroll-smooth"
+            >
+              {categories.map((cat) => {
+                const isSelected = selectedCategory === cat.id;
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex-none w-[134px] h-[180px] bg-[#EDF0E8] rounded-[12px] p-[16px] flex flex-col items-center justify-between gap-[12px] cursor-pointer transition-all duration-200 snap-start border-2 ${
+                      isSelected
+                        ? "border-[#636B2F] shadow-sm bg-[#e4e8dc]"
+                        : "border-transparent hover:border-[#D3D8C3]"
+                    }`}
+                  >
+                    <div className="w-full h-[96px] relative rounded-[8px] overflow-hidden flex items-center justify-center bg-[#D3D8C3]/30">
+                      <Image
+                        src={cat.image}
+                        alt={cat.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <span className="text-[13px] font-[600] text-[#3D4127] text-center leading-[16px] flex-1 flex items-center justify-center">
+                      {cat.title}
+                    </span>
                   </div>
-                  <span className="text-[13px] font-[600] text-[#3D4127] text-center leading-[16px] flex-1 flex items-center justify-center">
-                    {cat.title}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {/* Indikator Bayangan & Panah Penunjuk Scroll Kanan */}
+            <div
+              onClick={() => {
+                categoryScrollRef.current?.scrollBy({ left: 140, behavior: "smooth" });
+              }}
+              className={`absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-[#FBFFF3] via-[#FBFFF3]/80 to-transparent flex items-center justify-end pr-0.5 cursor-pointer transition-opacity duration-300 ${
+                canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+              title="Geser untuk pilihan lainnya"
+            >
+              <div className="w-6 h-6 rounded-full bg-white/95 shadow-md border border-[#3D4127]/15 flex items-center justify-center text-[#3D4127] hover:scale-105 active:scale-95 transition-transform">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -682,15 +723,7 @@ export default function NitiBaktiPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-bold text-[#3D4127] uppercase tracking-wider flex items-center gap-1.5">
-                  {submissionStatus === "disetujui" && (
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#16a34a]"></span>
-                  )}
-                  {submissionStatus === "menunggu_review" && (
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#ca8a04] animate-pulse"></span>
-                  )}
-                  {submissionStatus === "perlu_revisi" && (
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#dc2626]"></span>
-                  )}
+                  
                   Status Tugas
                 </span>
 

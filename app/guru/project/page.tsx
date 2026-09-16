@@ -239,7 +239,10 @@ export default function GuruProjectPage() {
   // Helper buka pratinjau dokumen di tab baru
   const handleOpenFile = (fileUrl: string, fileName: string) => {
     if (!fileUrl) {
-      alert("Berkas dokumen tidak ditemukan.");
+      setNotification({
+        type: "error",
+        message: "Berkas dokumen tidak ditemukan.",
+      });
       return;
     }
     const previewUrl = getDocumentPreviewUrl(fileUrl, fileName);

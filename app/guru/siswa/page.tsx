@@ -70,6 +70,26 @@ export default function GuruSiswaPenilaianPage() {
   const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Dropdown menu opsi siswa (titik 3)
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  // Tutup dropdown menu saat klik di luar area menu
+  useEffect(() => {
+    if (!activeMenuId) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-siswa-menu]")) {
+        setActiveMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeMenuId]);
+
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
@@ -282,7 +302,7 @@ export default function GuruSiswaPenilaianPage() {
   // Handler Modal Reset Kata Sandi Siswa
   const handleOpenResetModal = (siswa: SiswaItem) => {
     setSelectedSiswaForReset(siswa);
-    setNewPassword("siswa123!");
+    setNewPassword("");
     setShowPassword(false);
     setResetError(null);
     setIsResetModalOpen(true);
@@ -291,8 +311,8 @@ export default function GuruSiswaPenilaianPage() {
   const handleConfirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSiswaForReset) return;
-    if (!newPassword || newPassword.trim().length < 6) {
-      setResetError("Kata sandi baru minimal 6 karakter.");
+    if (!newPassword || newPassword.trim().length < 8) {
+      setResetError("Kata sandi baru minimal 8 karakter.");
       return;
     }
 
@@ -322,10 +342,9 @@ export default function GuruSiswaPenilaianPage() {
         setResetError(data.error || "Gagal mengatur ulang kata sandi.");
       } else {
         const studentName = selectedSiswaForReset.nama;
-        const passCreated = newPassword.trim();
         setIsResetModalOpen(false);
         setToast({
-          message: `Kata sandi siswa "${studentName}" berhasil diatur ulang menjadi "${passCreated}".`,
+          message: `Kata sandi siswa "${studentName}" berhasil diatur ulang.`,
           type: "success",
         });
       }
@@ -605,8 +624,7 @@ export default function GuruSiswaPenilaianPage() {
             </span>
           </div>
           <div className="flex-[1.8] text-center truncate">Sertifikat</div>
-          <div className="w-[84px] text-center truncate">Kelola Akun</div>
-          <div className="w-6" />
+          <div className="w-10 text-right">Aksi</div>
         </div>
 
         {/* Loading State */}
@@ -737,74 +755,74 @@ export default function GuruSiswaPenilaianPage() {
                     )}
                   </div>
 
-                  {/* Kolom Aksi Kelola Akun (Reset Sandi & Hapus) */}
-                  <div className="w-[84px] flex items-center justify-center gap-1.5 flex-shrink-0">
+                  {/* Dropdown Options Button (Titik 3) */}
+                  <div className="w-10 flex items-center justify-end relative" data-siswa-menu>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenResetModal(row);
+                        setActiveMenuId(activeMenuId === row.id ? null : row.id);
                       }}
-                      title={`Atur Ulang Kata Sandi ${row.nama}`}
-                      className="w-7 h-7 rounded-[8px] bg-[#636B2F]/10 hover:bg-[#636B2F]/25 text-[#636B2F] flex items-center justify-center transition-all cursor-pointer border border-[#636B2F]/25 hover:border-[#636B2F]/50 shadow-2xs active:scale-95"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
+                      aria-label="Opsi akun siswa"
                     >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L11 9l-1.5-1.5L8 9" />
-                        <path d="M15.5 10.5a5 5 0 1 0-7.07 7.07 5 5 0 0 0 7.07-7.07z" />
-                      </svg>
+                      <Image
+                        src="/guru/icon titik 3.svg"
+                        alt="Opsi"
+                        width={16}
+                        height={16}
+                        className="object-contain opacity-70"
+                      />
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDeleteModal(row);
-                      }}
-                      title={`Hapus Akun ${row.nama}`}
-                      className="w-7 h-7 rounded-[8px] bg-[#dc2626]/10 hover:bg-[#dc2626]/25 text-[#dc2626] flex items-center justify-center transition-all cursor-pointer border border-[#dc2626]/25 hover:border-[#dc2626]/50 shadow-2xs active:scale-95"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        <line x1="10" y1="11" x2="10" y2="17" />
-                        <line x1="14" y1="11" x2="14" y2="17" />
-                      </svg>
-                    </button>
-                  </div>
 
-                  {/* Tombol Opsi / Arrow */}
-                  <div className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/5 transition-colors flex-shrink-0">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-[#9CA08D] group-hover:text-[#636B2F] transition-colors"
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
+                    {/* Popover Action Menu */}
+                    {activeMenuId === row.id && (
+                      <div
+                        className="absolute right-0 top-10 bg-white border border-[#D3D8C3] shadow-lg rounded-[12px] p-1 z-30 min-w-[170px] flex flex-col gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            handleOpenResetModal(row);
+                          }}
+                          className="w-full px-3 py-2 text-left text-[13px] font-medium text-[#3D4127] hover:bg-[#EDF0E8] rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L11 9l-1.5-1.5L8 9" />
+                            <path d="M15.5 10.5a5 5 0 1 0-7.07 7.07 5 5 0 0 0 7.07-7.07z" />
+                          </svg>
+                          <span>Atur Ulang Sandi</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            handleOpenDeleteModal(row);
+                          }}
+                          className="w-full px-3 py-2 text-left text-[13px] font-medium text-[#b91c1c] hover:bg-[#fecaca]/40 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                          <Image
+                            src="/guru/icon delet.svg"
+                            alt="Hapus"
+                            width={14}
+                            height={14}
+                            className="object-contain"
+                          />
+                          <span>Hapus Akun</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -824,9 +842,7 @@ export default function GuruSiswaPenilaianPage() {
                 <h3 className="text-[20px] font-bold text-[#3D4127]">
                   Rekapitulasi Progres & Nilai Siswa
                 </h3>
-                <p className="text-[13px] text-[#3D4127]/70">
-                  Ringkasan penyelesaian 5 Tahap Niti untuk seluruh siswa terdaftar.
-                </p>
+                
               </div>
               <button
                 onClick={() => setIsRekapOpen(false)}
@@ -1095,9 +1111,9 @@ export default function GuruSiswaPenilaianPage() {
                     type={showPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Minimal 8 karakter"
                     required
-                    minLength={6}
+                    minLength={8}
                     className="w-full px-3.5 py-2.5 bg-white border border-[#D3D8C3] rounded-[14px] text-[14px] text-[#3D4127] placeholder-[#3D4127]/40 focus:outline-none focus:border-[#636B2F] pr-20"
                   />
                   <div className="absolute right-2 flex items-center gap-1">
@@ -1110,15 +1126,8 @@ export default function GuruSiswaPenilaianPage() {
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#3D4127]/60 mt-1">
-                  <span>Minimal 6 karakter</span>
-                  <button
-                    type="button"
-                    onClick={() => setNewPassword("siswa123!")}
-                    className="text-[#636B2F] font-bold hover:underline cursor-pointer"
-                  >
-                    Gunakan Sandi Cepat (siswa123!)
-                  </button>
+                <div className="text-[11px] text-[#3D4127]/60 mt-1">
+                  <span>Minimal 8 karakter</span>
                 </div>
               </div>
 
@@ -1168,9 +1177,7 @@ export default function GuruSiswaPenilaianPage() {
                 <h3 className="text-[18px] font-bold text-[#3D4127]">
                   Hapus Akun Siswa?
                 </h3>
-                <p className="text-[12.5px] text-red-600 font-semibold">
-                  Tindakan ini tidak dapat dibatalkan
-                </p>
+               
               </div>
               <button
                 type="button"

@@ -118,9 +118,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (typeof new_password !== "string" || new_password.trim().length < 6) {
+    if (typeof new_password !== "string" || new_password.trim().length < 8) {
       return NextResponse.json(
-        { error: "Kata sandi baru minimal 6 karakter." },
+        { error: "Kata sandi baru minimal 8 karakter." },
         { status: 400 }
       );
     }

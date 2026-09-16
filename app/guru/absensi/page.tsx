@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import ConfirmModal from "@/components/ConfirmModal";
+import ToastNotification from "@/components/ToastNotification";
 
 interface SessionItem {
   id: string; // encoded key: tanggal__kelas
@@ -39,9 +41,19 @@ export default function GuruAbsensiPage() {
     return new Date().toISOString().split("T")[0];
   });
 
-  // Action Menu Dropdown (untuk hapus sesi)
+  // Action Menu Dropdown & Delete Modal
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<SessionItem | null>(null);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error" | "warning";
+  }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
 
   useEffect(() => {
     loadAbsensiData();
@@ -190,43 +202,53 @@ export default function GuruAbsensiPage() {
     }
   }
 
-  const handleDeleteSession = async (session: SessionItem) => {
-    const labelSesi =
-      session.kelas === "Tanpa Kelas"
-        ? "Absensi (Tanpa Kelas)"
-        : `kelas ${session.kelas}`;
+  const handleOpenDeleteModal = (session: SessionItem) => {
+    setActiveMenuId(null);
+    setSessionToDelete(session);
+  };
 
-    if (
-      !confirm(
-        `Apakah Anda yakin ingin menghapus seluruh catatan absensi ${labelSesi} pada tanggal ${session.tanggalFormatted}?`
-      )
-    ) {
-      return;
-    }
-
+  const handleConfirmDeleteSession = async () => {
+    if (!sessionToDelete) return;
     setIsDeleting(true);
     try {
-      // Hapus data absensi langsung berdasarkan ID catatan absensi yang tercakup dalam sesi ini
-      // Ini memastikan konsistensi meskipun siswa sudah pindah kelas atau berganti profil
-      if (session.absensiIds && session.absensiIds.length > 0) {
+      if (sessionToDelete.absensiIds && sessionToDelete.absensiIds.length > 0) {
         const { error } = await supabase
           .from("absensi")
           .delete()
-          .in("id", session.absensiIds);
+          .in("id", sessionToDelete.absensiIds);
 
         if (error) {
-          alert("Gagal menghapus sesi absensi: " + error.message);
+          setToast({
+            show: true,
+            message: "Gagal menghapus sesi absensi: " + error.message,
+            type: "error",
+          });
         } else {
-          setSessions((prev) => prev.filter((s) => s.id !== session.id));
+          setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
+          setToast({
+            show: true,
+            message: "Sesi absensi berhasil dihapus.",
+            type: "success",
+          });
         }
       } else {
-        setSessions((prev) => prev.filter((s) => s.id !== session.id));
+        setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
+        setToast({
+          show: true,
+          message: "Sesi absensi berhasil dihapus.",
+          type: "success",
+        });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting session:", err);
+      setToast({
+        show: true,
+        message: "Terjadi kesalahan: " + (err?.message || "Gagal menghapus"),
+        type: "error",
+      });
     } finally {
       setIsDeleting(false);
-      setActiveMenuId(null);
+      setSessionToDelete(null);
     }
   };
 
@@ -482,7 +504,7 @@ export default function GuruAbsensiPage() {
                       <button
                         type="button"
                         disabled={isDeleting}
-                        onClick={() => handleDeleteSession(row)}
+                        onClick={() => handleOpenDeleteModal(row)}
                         className="w-full px-3 py-1.5 text-left text-[13px] font-medium text-[#b91c1c] hover:bg-[#fecaca]/40 rounded-lg transition-colors flex items-center gap-2"
                       >
                         <Image
@@ -599,6 +621,38 @@ export default function GuruAbsensiPage() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <ToastNotification
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+        />
+      )}
+
+      {/* Modal Konfirmasi Hapus Sesi */}
+      <ConfirmModal
+        isOpen={!!sessionToDelete}
+        title="Hapus Sesi Absensi"
+        message={
+          sessionToDelete
+            ? `Apakah Anda yakin ingin menghapus seluruh catatan absensi ${
+                sessionToDelete.kelas === "Tanpa Kelas"
+                  ? "Absensi (Tanpa Kelas)"
+                  : `kelas ${sessionToDelete.kelas}`
+              } pada tanggal ${sessionToDelete.tanggalFormatted}?`
+            : ""
+        }
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        type="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDeleteSession}
+        onCancel={() => {
+          if (!isDeleting) setSessionToDelete(null);
+        }}
+      />
     </div>
   );
 }
