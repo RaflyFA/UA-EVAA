@@ -59,14 +59,18 @@ const fallbackVideos: VideoItem[] = [
   },
 ];
 
-// Helper untuk mengekstrak URL embed YouTube
-function getYoutubeEmbedUrl(url?: string): string | null {
+// Helper untuk mengekstrak Video ID & Embed YouTube
+function getYoutubeVideoId(url?: string): string | null {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11
-    ? `https://www.youtube.com/embed/${match[2]}`
-    : null;
+  const trimmed = url.trim();
+  const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/;
+  const match = trimmed.match(regExp);
+  return match && match[1] ? match[1] : null;
+}
+
+function getYoutubeEmbedUrl(url?: string): string | null {
+  const videoId = getYoutubeVideoId(url);
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
 }
 
 export default function NitiHartiPage() {

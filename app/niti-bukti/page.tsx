@@ -9,6 +9,7 @@ import Sidebar from "@/components/Sidebar";
 import SiswaGuard from "@/components/SiswaGuard";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
+import { getPresignedUploadUrl, deleteFileFromR2 } from "@/app/actions/r2";
 
 import LockedModal from "@/components/LockedModal";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -146,28 +147,27 @@ export default function NitiBuktiPage() {
         const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const filePath = `niti-bukti/${safeFileName}`;
 
-        // 1. Upload berkas ke Supabase Storage Bucket 'submissions'
-        const { data: uploadData, error: uploadErr } = await supabase.storage
-          .from("submissions")
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+        // 1. Dapatkan Presigned URL dari R2
+        const { presignedUrl, publicUrl, fileKey } = await getPresignedUploadUrl(
+          "submissions",
+          safeFileName,
+          file.type
+        );
 
-        if (uploadErr) {
-          throw new Error(`Gagal upload berkas ke storage: ${uploadErr.message}`);
+        // 2. Upload langsung ke R2 menggunakan presigned URL
+        const uploadRes = await fetch(presignedUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error("Gagal mengunggah berkas ke server penyimpanan.");
         }
 
-        if (uploadData?.path) {
-          setUploadedPath(uploadData.path);
-        }
-
-        // 2. Dapatkan URL publik berkas
-        const { data: urlData } = supabase.storage
-          .from("submissions")
-          .getPublicUrl(filePath);
-
-        const publicUrl = urlData?.publicUrl || "";
+        setUploadedPath(fileKey);
 
         // 3. Simpan catatan ke tabel submission_aksi dengan status 'menunggu_review'
         const { error: insertErr } = await supabase.from("submission_aksi").insert({
@@ -221,7 +221,7 @@ export default function NitiBuktiPage() {
     e.stopPropagation();
     if (uploadedPath) {
       try {
-        await supabase.storage.from("submissions").remove([uploadedPath]);
+        await deleteFileFromR2(uploadedPath);
       } catch (err) {
         console.error("Gagal menghapus file dari storage:", err);
       }
@@ -292,7 +292,7 @@ export default function NitiBuktiPage() {
 
       if (pathToDel) {
         try {
-          await supabase.storage.from("submissions").remove([pathToDel]);
+          await deleteFileFromR2(pathToDel);
         } catch (storageErr) {
           console.error("Gagal menghapus file dari storage:", storageErr);
         }

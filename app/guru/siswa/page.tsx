@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import ToastNotification from "@/components/ToastNotification";
+import { getPresignedUploadUrl } from "@/app/actions/r2";
 
 interface SiswaItem {
   id: string;
@@ -219,23 +220,29 @@ export default function GuruSiswaPenilaianPage() {
 
       if (certFile) {
         const fileExt = certFile.name.split(".").pop();
-        const filePath = `${selectedSiswaForCert.id}/${Date.now()}_sertifikat.${fileExt}`;
+        const safeFileName = `${Date.now()}_sertifikat.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("sertifikat")
-          .upload(filePath, certFile, { upsert: true });
+        // Dapatkan Presigned URL dari R2
+        const { presignedUrl, publicUrl } = await getPresignedUploadUrl(
+          "sertifikat",
+          `${selectedSiswaForCert.id}/${safeFileName}`,
+          certFile.type
+        );
 
-        if (uploadError) {
-          throw new Error(
-            `Gagal upload ke storage: ${uploadError.message}. Pastikan bucket 'sertifikat' publik di Supabase Storage sudah dibuat.`
-          );
+        // Upload langsung ke R2 menggunakan presigned URL
+        const uploadRes = await fetch(presignedUrl, {
+          method: "PUT",
+          body: certFile,
+          headers: {
+            "Content-Type": certFile.type,
+          },
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error("Gagal mengunggah berkas ke server penyimpanan R2.");
         }
 
-        const { data: urlData } = supabase.storage
-          .from("sertifikat")
-          .getPublicUrl(filePath);
-
-        fileUrl = urlData?.publicUrl || null;
+        fileUrl = publicUrl;
       }
 
       const now = new Date().toISOString();

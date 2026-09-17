@@ -72,6 +72,20 @@ interface YoutubeCard {
   image: string;
 }
 
+// Helper untuk mengekstrak Video ID & Thumbnail YouTube
+function getYoutubeVideoId(url?: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/;
+  const match = trimmed.match(regExp);
+  return match && match[1] ? match[1] : null;
+}
+
+function getYoutubeThumbnail(url?: string): string | null {
+  const videoId = getYoutubeVideoId(url);
+  return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+}
+
 export default function GuruEditModulPage() {
   const params = useParams();
   const rawSlug = (params?.slug as string) || "niti-harti";
@@ -187,7 +201,7 @@ export default function GuruEditModulPage() {
                 id: item.id,
                 judul: item.judul || "Video Pembelajaran",
                 url: item.url_youtube || "",
-                image: idx % 2 === 0 ? "/lampiran-2.png" : "/lampiran-3.png",
+                image: getYoutubeThumbnail(item.url_youtube) || (idx % 2 === 0 ? "/lampiran-2.png" : "/lampiran-3.png"),
               }));
 
             if (loadedBacaan.length > 0) setDeskripsiCards(loadedBacaan);
@@ -734,7 +748,9 @@ export default function GuruEditModulPage() {
                             placeholder="https://www.youtube.com/watch?v=..."
                             onChange={(e) => {
                               const newCards = [...youtubeCards];
-                              newCards[idx].url = e.target.value;
+                              const newUrl = e.target.value;
+                              newCards[idx].url = newUrl;
+                              newCards[idx].image = getYoutubeThumbnail(newUrl) || card.image;
                               setYoutubeCards(newCards);
                             }}
                             className="w-full bg-[#EDF0E8] rounded-[12px] p-3 text-[#3D4127] font-semibold text-[14px] border border-[#D3D8C3]/40 focus:outline-none"
@@ -743,21 +759,43 @@ export default function GuruEditModulPage() {
                       </div>
 
                       <div className="w-[200px] flex flex-col gap-1 flex-shrink-0">
-                        <label className="text-[12px] font-medium text-[#3D4127]/60">
-                          Pratinjau Video
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[12px] font-medium text-[#3D4127]/60">
+                            Pratinjau Video
+                          </label>
+                          {getYoutubeVideoId(card.url) && (
+                            <a
+                              href={`https://www.youtube.com/watch?v=${getYoutubeVideoId(card.url)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-[#636B2F] hover:underline font-semibold"
+                              title="Buka di YouTube"
+                            >
+                              Buka ↗
+                            </a>
+                          )}
+                        </div>
                         <div className="w-full h-[110px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5 flex items-center justify-center">
-                          <Image
-                            src={card.image || "/lampiran-2.png"}
-                            alt={card.judul}
-                            fill
-                            className="object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                            <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
-                              <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
-                            </div>
-                          </div>
+                          {(() => {
+                            const thumbUrl = getYoutubeThumbnail(card.url) || card.image || "/lampiran-2.png";
+                            return (
+                              <>
+                                <img
+                                  src={thumbUrl}
+                                  alt={card.judul}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/lampiran-2.png";
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
+                                  <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
+                                    <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1009,26 +1047,31 @@ export default function GuruEditModulPage() {
                 <span className="text-[12px] font-bold text-[#3D4127]/70 uppercase tracking-wider">
                   Video Pembelajaran
                 </span>
-                {youtubeCards.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-1 w-full">
-                    <span className="text-[12px] font-bold text-[#3D4127] line-clamp-1">
-                      {item.judul}
-                    </span>
-                    <div className="w-full h-[110px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5">
-                      <Image
-                        src={item.image || "/lampiran-2.png"}
-                        alt={item.judul}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
-                          <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
+                {youtubeCards.map((item) => {
+                  const thumb = getYoutubeThumbnail(item.url) || item.image || "/lampiran-2.png";
+                  return (
+                    <div key={item.id} className="flex flex-col gap-1 w-full">
+                      <span className="text-[12px] font-bold text-[#3D4127] line-clamp-1">
+                        {item.judul}
+                      </span>
+                      <div className="w-full h-[110px] rounded-[12px] overflow-hidden relative shadow-sm border border-[#D3D8C3] bg-black/5">
+                        <img
+                          src={thumb}
+                          alt={item.judul}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/lampiran-2.png";
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="w-8 h-6 bg-red-600 rounded-md flex items-center justify-center shadow">
+                            <div className="w-0 h-0 border-y-[4px] border-y-transparent border-l-[7px] border-l-white ml-0.5" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
